@@ -23,6 +23,7 @@
         <button id="btn-search" class="icon-btn" title="Search">⌕</button>
         <button id="btn-hidden" class="icon-btn" title="Toggle hidden files">◎</button>
         <button id="btn-upload" class="icon-btn" title="Upload">↑</button>
+        <button id="btn-db" class="icon-btn" title="Database">DB</button>
         <button id="btn-terminal" class="icon-btn" title="Show/hide terminal (keeps sessions)">⌨</button>
         <button id="btn-term-popout" class="icon-btn" title="Terminal in new tab">↗</button>
       </div>
@@ -146,11 +147,72 @@
     </div>
   </div>
 
+  <!-- DB browser -->
+  <div id="db-overlay" class="hidden">
+    <div id="db-header">
+      <button id="db-back" class="icon-btn" title="Back">←</button>
+      <span id="db-title">Database</span>
+      <div id="db-header-actions">
+        <button id="db-refresh" class="icon-btn" title="Refresh">↻</button>
+        <button id="db-disconnect" class="icon-btn" title="Disconnect">⏏</button>
+      </div>
+    </div>
+
+    <div id="db-connect">
+      <div class="db-driver-toggle">
+        <button type="button" class="db-driver-btn active" data-driver="mysql">MySQL</button>
+        <button type="button" class="db-driver-btn" data-driver="sqlite">SQLite</button>
+      </div>
+      <div id="db-mysql-fields" class="db-form">
+        <label>Host <input id="db-host" type="text" value="127.0.0.1" autocomplete="off" /></label>
+        <label>Port <input id="db-port" type="number" value="3306" /></label>
+        <label>User <input id="db-user" type="text" value="root" autocomplete="username" /></label>
+        <label>Password <input id="db-password" type="password" value="" autocomplete="current-password" /></label>
+        <label>Database <input id="db-database" type="text" value="" placeholder="optional" autocomplete="off" /></label>
+      </div>
+      <div id="db-sqlite-fields" class="db-form hidden">
+        <label>File path <input id="db-path" type="text" placeholder="relative or absolute under root" autocomplete="off" /></label>
+      </div>
+      <button id="db-connect-btn" class="primary db-connect-submit">Connect</button>
+    </div>
+
+    <div id="db-browser" class="hidden">
+      <aside id="db-sidebar">
+        <div id="db-db-select-wrap" class="hidden">
+          <select id="db-db-select"></select>
+        </div>
+        <div id="db-table-list"></div>
+      </aside>
+      <section id="db-main">
+        <div id="db-toolbar">
+          <button id="db-view-rows" class="sel-btn active" type="button">Rows</button>
+          <button id="db-view-sql" class="sel-btn" type="button">SQL</button>
+          <button id="db-insert-btn" class="sel-btn" type="button" disabled>Insert</button>
+          <span id="db-no-pk-hint" class="db-hint hidden">No PK — view/SQL only</span>
+          <div id="db-pager">
+            <button id="db-prev" class="icon-btn" type="button" disabled>‹</button>
+            <span id="db-page-info"></span>
+            <button id="db-next" class="icon-btn" type="button" disabled>›</button>
+          </div>
+        </div>
+        <div id="db-rows-view">
+          <div id="db-grid"><div class="db-empty">Select a table</div></div>
+        </div>
+        <div id="db-sql-view" class="hidden">
+          <textarea id="db-sql-input" rows="5" placeholder="SELECT * FROM …" spellcheck="false"></textarea>
+          <button id="db-sql-run" class="primary" type="button">Run</button>
+          <div id="db-sql-result"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <!-- Context menu -->
   <div id="ctx-menu" class="hidden">
     <button data-ctx="open">Open</button>
     <button data-ctx="preview">Preview</button>
     <button data-ctx="edit">Edit</button>
+    <button data-ctx="open-db">Open as DB</button>
     <button data-ctx="download">Download</button>
     <button data-ctx="rename">Rename</button>
     <button data-ctx="copy">Copy path</button>
@@ -201,6 +263,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
   <script src="/vendor/ace/ace.js"></script>
   <script src="/app.js"></script>
+  <script src="/db.js"></script>
   <script src="/terminal.js"></script>
 </body>
 </html>

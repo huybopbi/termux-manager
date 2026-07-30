@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -386,6 +387,29 @@ func safeJoin(root, rel string) string {
 		return ""
 	}
 	return abs
+}
+
+// AbsPath resolves rel (or an absolute path under root) to an absolute path
+// that stays within root. Returns an error if the path escapes root.
+func AbsPath(root, path string) (string, error) {
+	root = filepath.Clean(root)
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", fmt.Errorf("path required")
+	}
+	var abs string
+	if filepath.IsAbs(path) {
+		abs = filepath.Clean(path)
+	} else {
+		abs = safeJoin(root, path)
+		if abs == "" {
+			return "", fmt.Errorf("path outside root")
+		}
+	}
+	if abs != root && !strings.HasPrefix(abs, root+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path outside root")
+	}
+	return abs, nil
 }
 
 func copyFile(src, dst string) error {

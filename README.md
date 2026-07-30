@@ -71,6 +71,12 @@ Bind is **127.0.0.1 only**. From a PC: SSH tunnel, then open `http://127.0.0.1:<
 - Mobile toolbar (Esc, Tab, Ctrl keys, arrows, Copy/Paste)
 - Nerd Font for Powerlevel10k icons; strips inherited `SSH_*` env
 
+### Database
+- Toolbar **DB**: connect to **MySQL/MariaDB** or **SQLite** (pure Go, `CGO_ENABLED=0`)
+- Browse tables, paginated rows, edit/insert/delete when a primary key exists
+- SQL console; context menu **Open as DB** for `.db` / `.sqlite` / `.sqlite3`
+- In-memory sessions only (idle TTL ~30m); no saved passwords
+
 ### Termux hooks
 - Share file (`termux-share`)
 - Clipboard path/text
@@ -106,8 +112,9 @@ go build -o dist/manager-android-arm64 .
 ```
 termux-manager/
 ├── main.go
-├── server/          # HTTP API + persistent PTY WebSocket
+├── server/          # HTTP API + persistent PTY WebSocket + DB handlers
 ├── fs/              # list/read/write/copy/zip/…
+├── db/              # MySQL + SQLite session store / query helpers
 ├── termux/          # Termux bridge + quick paths
 ├── embed/           # UI (go:embed), Ace under embed/vendor/ace/
 ├── Makefile
@@ -118,6 +125,7 @@ termux-manager/
 1. Binary serves embedded static files  
 2. REST under `/api/*` for files  
 3. `/ws/terminal?id=` attaches to a durable PTY session  
+4. `/api/db/*` opens an in-memory DB session (`X-DB-Session` header)
 
 ---
 
@@ -130,12 +138,25 @@ termux-manager/
 | GET | `/api/download?path=&inline=1` | Download / inline preview |
 | GET | `/api/info` | Root, Termux flags, `quick_paths` |
 | POST | `/api/root` | Switch browse root (quick path) |
+| POST | `/api/untar` | Extract `.tar` / `.tar.gz` / `.tgz` |
+| POST | `/api/unzip` | Extract `.zip` |
 | GET/DELETE | `/api/terminal/sessions` | List / kill PTY sessions |
 | WS | `/ws/terminal?id=` | Persistent terminal |
+| POST | `/api/db/connect` | MySQL or SQLite → `session_id` |
+| POST | `/api/db/disconnect` | Close session (`X-DB-Session`) |
+| GET | `/api/db/databases` | List schemas (MySQL) |
+| POST | `/api/db/use` | Switch schema (MySQL) |
+| GET | `/api/db/tables` | List tables/views |
+| GET | `/api/db/columns?table=` | Column meta + PK |
+| GET | `/api/db/rows?table=&limit=&offset=` | Browse rows (capped) |
+| POST/PUT/DELETE | `/api/db/row` | Insert / update / delete by PK |
+| POST | `/api/db/query` | SQL console (15s timeout) |
 
 JSON shape: `{"ok":true,"data":...}` or `{"ok":false,"error":"..."}`.
 
 Terminal messages: `input` / `resize` / `kill` (client), `output` / `history` / `ready` (server).
+
+DB panel: toolbar **DB**, or context menu **Open as DB** on `.db` / `.sqlite` / `.sqlite3`. Sessions idle out after ~30 minutes. Passwords are not persisted.
 
 ---
 
@@ -147,10 +168,23 @@ Listens on **localhost only**. No auth by default. If you tunnel or proxy the po
 
 ## Roadmap
 
+### Done
+- [x] Ace editor (replace textarea + highlight.js)
+- [x] Quick paths (Home / Storage / Download / DCIM / Shared / Prefix)
+- [x] Image preview
+- [x] Persistent terminal sessions (reconnect after refresh; ✕ kills)
+- [x] Extract `.tar.gz` / `.tgz` / `.tar` and `.zip` (editable full path → open folder)
+- [x] Colored file-type badges (folder keeps emoji `📁`)
+- [x] Open extensionless files in editor
+- [x] Editor extras: dirty ●, Ctrl+S, find/replace, goto, wrap, font ±, undo/redo
+- [x] Terminal: Nerd Font, mobile Copy/Paste, popout `/term.html`, clean `SSH_*` env
+- [x] DB panel: connect MySQL/MariaDB + SQLite, browse/edit rows (PK), SQL console
+
+### Planned
 - [ ] Basic auth (`-auth`)
 - [ ] Light theme
-- [x] `.tar.gz` / `.tgz` / `.tar` extract (and `.zip`)
 - [ ] Receive Android shares into current folder
+- [ ] Warn / limit opening very large files in editor
 
 ---
 

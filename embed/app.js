@@ -76,30 +76,122 @@ function formatDate(iso) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-function fileIcon(file) {
-  if (file.is_dir) return '📁';
-  const ext = (file.ext || '').toLowerCase();
-  const map = {
+/** Colored badge + type label by file kind */
+function fileTypeInfo(file) {
+  if (file && file.is_dir) {
+    return { kind: 'folder', badge: 'DIR', tag: 'Folder', glyph: '▣' };
+  }
+  const name = ((file && file.name) || '').toLowerCase();
+  const ext = ((file && file.ext) || '').toLowerCase();
+
+  if (name.endsWith('.tar.gz') || ext === 'tgz') {
+    return { kind: 'archive', badge: 'TGZ', tag: 'Archive', glyph: '⧉' };
+  }
+
+  const byExt = {
     // images
-    png:'🖼', jpg:'🖼', jpeg:'🖼', gif:'🖼', webp:'🖼', svg:'🖼', bmp:'🖼',
+    png:  { kind: 'image', badge: 'PNG', tag: 'Image', glyph: '▣' },
+    jpg:  { kind: 'image', badge: 'JPG', tag: 'Image', glyph: '▣' },
+    jpeg: { kind: 'image', badge: 'JPG', tag: 'Image', glyph: '▣' },
+    gif:  { kind: 'image', badge: 'GIF', tag: 'Image', glyph: '▣' },
+    webp: { kind: 'image', badge: 'WEB', tag: 'Image', glyph: '▣' },
+    svg:  { kind: 'image', badge: 'SVG', tag: 'Image', glyph: '▣' },
+    bmp:  { kind: 'image', badge: 'BMP', tag: 'Image', glyph: '▣' },
+    ico:  { kind: 'image', badge: 'ICO', tag: 'Image', glyph: '▣' },
+    heic: { kind: 'image', badge: 'HEIC', tag: 'Image', glyph: '▣' },
+    avif: { kind: 'image', badge: 'AVIF', tag: 'Image', glyph: '▣' },
     // video
-    mp4:'🎬', mkv:'🎬', avi:'🎬', mov:'🎬', webm:'🎬',
+    mp4:  { kind: 'video', badge: 'MP4', tag: 'Video', glyph: '▶' },
+    mkv:  { kind: 'video', badge: 'MKV', tag: 'Video', glyph: '▶' },
+    avi:  { kind: 'video', badge: 'AVI', tag: 'Video', glyph: '▶' },
+    mov:  { kind: 'video', badge: 'MOV', tag: 'Video', glyph: '▶' },
+    webm: { kind: 'video', badge: 'WEB', tag: 'Video', glyph: '▶' },
     // audio
-    mp3:'🎵', flac:'🎵', ogg:'🎵', wav:'🎵', m4a:'🎵', aac:'🎵',
+    mp3:  { kind: 'audio', badge: 'MP3', tag: 'Audio', glyph: '♪' },
+    flac: { kind: 'audio', badge: 'FLAC', tag: 'Audio', glyph: '♪' },
+    ogg:  { kind: 'audio', badge: 'OGG', tag: 'Audio', glyph: '♪' },
+    wav:  { kind: 'audio', badge: 'WAV', tag: 'Audio', glyph: '♪' },
+    m4a:  { kind: 'audio', badge: 'M4A', tag: 'Audio', glyph: '♪' },
+    aac:  { kind: 'audio', badge: 'AAC', tag: 'Audio', glyph: '♪' },
     // code
-    js:'📝', ts:'📝', go:'📝', py:'📝', sh:'📝', bash:'📝', php:'📝',
-    html:'📝', css:'📝', json:'📝', yaml:'📝', yml:'📝', toml:'📝',
-    c:'📝', cpp:'📝', h:'📝', rs:'📝', java:'📝', kt:'📝',
+    js:   { kind: 'code', badge: 'JS', tag: 'Code', glyph: '</>' },
+    mjs:  { kind: 'code', badge: 'JS', tag: 'Code', glyph: '</>' },
+    ts:   { kind: 'code', badge: 'TS', tag: 'Code', glyph: '</>' },
+    go:   { kind: 'code', badge: 'GO', tag: 'Code', glyph: '</>' },
+    py:   { kind: 'code', badge: 'PY', tag: 'Code', glyph: '</>' },
+    sh:   { kind: 'code', badge: 'SH', tag: 'Shell', glyph: '$' },
+    bash: { kind: 'code', badge: 'SH', tag: 'Shell', glyph: '$' },
+    zsh:  { kind: 'code', badge: 'SH', tag: 'Shell', glyph: '$' },
+    php:  { kind: 'code', badge: 'PHP', tag: 'Code', glyph: '</>' },
+    html: { kind: 'code', badge: 'HTML', tag: 'Code', glyph: '</>' },
+    htm:  { kind: 'code', badge: 'HTML', tag: 'Code', glyph: '</>' },
+    css:  { kind: 'code', badge: 'CSS', tag: 'Code', glyph: '</>' },
+    json: { kind: 'code', badge: 'JSON', tag: 'Data', glyph: '{}' },
+    yaml: { kind: 'code', badge: 'YAML', tag: 'Data', glyph: '{}' },
+    yml:  { kind: 'code', badge: 'YAML', tag: 'Data', glyph: '{}' },
+    toml: { kind: 'code', badge: 'TOML', tag: 'Data', glyph: '{}' },
+    xml:  { kind: 'code', badge: 'XML', tag: 'Data', glyph: '</>' },
+    c:    { kind: 'code', badge: 'C', tag: 'Code', glyph: '</>' },
+    h:    { kind: 'code', badge: 'H', tag: 'Code', glyph: '</>' },
+    cpp:  { kind: 'code', badge: 'C++', tag: 'Code', glyph: '</>' },
+    rs:   { kind: 'code', badge: 'RS', tag: 'Code', glyph: '</>' },
+    java: { kind: 'code', badge: 'JAVA', tag: 'Code', glyph: '</>' },
+    kt:   { kind: 'code', badge: 'KT', tag: 'Code', glyph: '</>' },
+    sql:  { kind: 'code', badge: 'SQL', tag: 'Data', glyph: '{}' },
     // docs
-    pdf:'📄', doc:'📄', docx:'📄', ppt:'📄', pptx:'📄', xls:'📄', xlsx:'📄',
+    pdf:  { kind: 'doc', badge: 'PDF', tag: 'Doc', glyph: '¶' },
+    doc:  { kind: 'doc', badge: 'DOC', tag: 'Doc', glyph: '¶' },
+    docx: { kind: 'doc', badge: 'DOC', tag: 'Doc', glyph: '¶' },
+    ppt:  { kind: 'doc', badge: 'PPT', tag: 'Doc', glyph: '¶' },
+    pptx: { kind: 'doc', badge: 'PPT', tag: 'Doc', glyph: '¶' },
+    xls:  { kind: 'doc', badge: 'XLS', tag: 'Sheet', glyph: '#' },
+    xlsx: { kind: 'doc', badge: 'XLS', tag: 'Sheet', glyph: '#' },
     // archives
-    zip:'📦', tar:'📦', gz:'📦', bz2:'📦', xz:'📦', rar:'📦', '7z':'📦',
+    zip:  { kind: 'archive', badge: 'ZIP', tag: 'Archive', glyph: '⧉' },
+    tar:  { kind: 'archive', badge: 'TAR', tag: 'Archive', glyph: '⧉' },
+    gz:   { kind: 'archive', badge: 'GZ', tag: 'Archive', glyph: '⧉' },
+    bz2:  { kind: 'archive', badge: 'BZ2', tag: 'Archive', glyph: '⧉' },
+    xz:   { kind: 'archive', badge: 'XZ', tag: 'Archive', glyph: '⧉' },
+    rar:  { kind: 'archive', badge: 'RAR', tag: 'Archive', glyph: '⧉' },
+    '7z': { kind: 'archive', badge: '7Z', tag: 'Archive', glyph: '⧉' },
     // apk
-    apk:'📱',
+    apk:  { kind: 'apk', badge: 'APK', tag: 'App', glyph: '▣' },
     // text
-    txt:'📃', md:'📃', log:'📃', csv:'📃',
+    txt:  { kind: 'text', badge: 'TXT', tag: 'Text', glyph: '≡' },
+    md:   { kind: 'text', badge: 'MD', tag: 'Text', glyph: '≡' },
+    log:  { kind: 'text', badge: 'LOG', tag: 'Text', glyph: '≡' },
+    csv:  { kind: 'text', badge: 'CSV', tag: 'Data', glyph: '#' },
+    conf: { kind: 'text', badge: 'CFG', tag: 'Config', glyph: '⚙' },
+    ini:  { kind: 'text', badge: 'INI', tag: 'Config', glyph: '⚙' },
+    env:  { kind: 'text', badge: 'ENV', tag: 'Config', glyph: '⚙' },
   };
-  return map[ext] || '📄';
+
+  if (byExt[ext]) return byExt[ext];
+
+  if (!ext) {
+    if (name === 'makefile' || name.startsWith('makefile.')) {
+      return { kind: 'code', badge: 'MAKE', tag: 'Build', glyph: '$' };
+    }
+    if (name === 'dockerfile' || name.startsWith('dockerfile.')) {
+      return { kind: 'code', badge: 'DOCK', tag: 'Docker', glyph: '</>' };
+    }
+    return { kind: 'text', badge: 'FILE', tag: 'File', glyph: '≡' };
+  }
+
+  const short = ext.length <= 4 ? ext.toUpperCase() : ext.slice(0, 3).toUpperCase();
+  return { kind: 'other', badge: short, tag: ext.toUpperCase(), glyph: '·' };
+}
+
+function fileBadgeHtml(file) {
+  const t = fileTypeInfo(file);
+  // Folders: emoji like before (not a PNG asset)
+  if (t.kind === 'folder') {
+    return `<div class="file-badge kind-folder file-badge-emoji" title="Folder">📁</div>`;
+  }
+  return `<div class="file-badge kind-${t.kind}" title="${escHtml(t.tag)}">` +
+    `<span class="file-badge-glyph">${escHtml(t.glyph)}</span>` +
+    `<span class="file-badge-ext">${escHtml(t.badge)}</span>` +
+    `</div>`;
 }
 
 function isEditable(file) {
@@ -308,7 +400,10 @@ function renderFiles(files) {
     up.className = 'file-row parent-row';
     up.innerHTML = `
       <div class="file-checkbox" style="visibility:hidden"></div>
-      <div class="file-icon">⬆️</div>
+      <div class="file-badge kind-up" title="Parent">
+        <span class="file-badge-glyph">↑</span>
+        <span class="file-badge-ext">UP</span>
+      </div>
       <div class="file-info">
         <div class="file-name">..</div>
         <div class="file-meta"><span>Parent folder</span></div>
@@ -333,11 +428,11 @@ function renderFiles(files) {
 
     row.innerHTML = `
       <div class="file-checkbox">${state.selected.has(file.path) ? '✓' : ''}</div>
-      <div class="file-icon">${fileIcon(file)}</div>
+      ${fileBadgeHtml(file)}
       <div class="file-info">
         <div class="file-name">${escHtml(file.name)}</div>
         <div class="file-meta">
-          ${file.is_dir ? '<span>Folder</span>' : `<span>${formatSize(file.size)}</span>`}
+          ${file.is_dir ? '' : `<span>${formatSize(file.size)}</span>`}
           <span>${formatDate(file.mod_time)}</span>
         </div>
       </div>
@@ -607,6 +702,7 @@ function showCtxMenu(e, file) {
   menu.querySelector('[data-ctx="edit"]').style.display = isEditable(file) ? '' : 'none';
   menu.querySelector('[data-ctx="preview"]').style.display = isImage(file) ? '' : 'none';
   menu.querySelector('[data-ctx="extract"]').style.display = isArchive(file) ? '' : 'none';
+  menu.querySelector('[data-ctx="open-db"]').style.display = isDBFile(file) ? '' : 'none';
   menu.querySelector('[data-ctx="open"]').style.display = file.is_dir ? 'none' : '';
   menu.querySelector('[data-ctx="share"]').style.display = state.isTermux ? '' : 'none';
 
@@ -1076,9 +1172,33 @@ async function doZip(paths) {
 
 async function doExtract(file) {
   if (!isArchive(file)) return;
-  const dest = archiveDestPath(file);
-  const ok = await confirmModal('Extract', `Extract ${file.name} → ${dest.split('/').pop() || dest}?`);
-  if (!ok) return;
+  const defaultDest = archiveDestPath(file);
+  // Show full relative path under current root (editable)
+  const displayDefault = state.root
+    ? joinPath(state.root.replace(/\\/g, '/'), defaultDest).replace(/\/+/g, '/')
+    : defaultDest;
+
+  const raw = await promptModal('Extract to', displayDefault);
+  if (!raw) return;
+
+  let dest = raw.trim().replace(/\\/g, '/').replace(/\/+/g, '/');
+  // If user kept/edited an absolute path under root, strip root prefix → API relative path
+  if (state.root) {
+    const rootNorm = state.root.replace(/\\/g, '/').replace(/\/+$/, '');
+    if (dest === rootNorm) {
+      toast('Invalid extract path', 'error');
+      return;
+    }
+    if (dest.startsWith(rootNorm + '/')) {
+      dest = dest.slice(rootNorm.length + 1);
+    }
+  }
+  dest = dest.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!dest || dest.split('/').some(p => p === '..' || p === '')) {
+    toast('Invalid extract path', 'error');
+    return;
+  }
+
   setLoading(true);
   const res = isZipArchive(file)
     ? await api.unzip(file.path, dest)
@@ -1086,7 +1206,7 @@ async function doExtract(file) {
   setLoading(false);
   if (res.ok) {
     toast('Extracted', 'success');
-    navigate(state.path);
+    navigate(dest);
   } else {
     toast(res.error || 'Extract failed', 'error');
   }
@@ -1123,6 +1243,8 @@ async function init() {
 
   // Initial load
   navigate('');
+
+  if (typeof initDBPanel === 'function') initDBPanel();
 
   // Header buttons
   $('#btn-back').onclick = goBack;
@@ -1219,6 +1341,9 @@ async function init() {
         case 'edit':
           openEditor(file);
           break;
+        case 'open-db':
+          openSQLiteFile(file);
+          break;
         case 'download':
           window.location.href = `/api/download?path=${enc(file.path)}`;
           break;
@@ -1255,6 +1380,14 @@ async function init() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       hideCtxMenu();
+      if (!$('#modal-overlay').classList.contains('hidden')) {
+        $('#modal-overlay').classList.add('hidden');
+        return;
+      }
+      if (typeof isDBOpen === 'function' && isDBOpen()) {
+        closeDBPanel();
+        return;
+      }
       if (isPreviewOpen()) {
         closePreview();
         return;
@@ -1269,10 +1402,6 @@ async function init() {
           return;
         }
         closeEditor();
-        return;
-      }
-      if (!$('#modal-overlay').classList.contains('hidden')) {
-        $('#modal-overlay').classList.add('hidden');
         return;
       }
       if (state.path) {

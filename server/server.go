@@ -31,6 +31,17 @@ func (s *Server) Routes(static embed.FS) http.Handler {
 	mux.HandleFunc("/api/root", s.method("POST", s.handleSetRoot))
 	mux.HandleFunc("/api/terminal/sessions", s.handleTermSessionsAPI)
 
+	// Database browser
+	mux.HandleFunc("/api/db/connect", s.method("POST", s.handleDBConnect))
+	mux.HandleFunc("/api/db/disconnect", s.method("POST", s.handleDBDisconnect))
+	mux.HandleFunc("/api/db/databases", s.method("GET", s.handleDBDatabases))
+	mux.HandleFunc("/api/db/use", s.method("POST", s.handleDBUse))
+	mux.HandleFunc("/api/db/tables", s.method("GET", s.handleDBTables))
+	mux.HandleFunc("/api/db/columns", s.method("GET", s.handleDBColumns))
+	mux.HandleFunc("/api/db/rows", s.method("GET", s.handleDBRows))
+	mux.HandleFunc("/api/db/row", s.handleDBRow)
+	mux.HandleFunc("/api/db/query", s.method("POST", s.handleDBQuery))
+
 	// Termux-specific
 	mux.HandleFunc("/api/termux/share", s.method("POST", s.handleTermuxShare))
 	mux.HandleFunc("/api/termux/clipboard", s.method("POST", s.handleTermuxClipboard))
