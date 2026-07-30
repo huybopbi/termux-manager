@@ -16,10 +16,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - goos: android
+          - goos: linux
             goarch: arm64
             asset: manager-android-arm64
-          - goos: android
+          - goos: linux
             goarch: arm
             goarm: "7"
             asset: manager-android-arm
