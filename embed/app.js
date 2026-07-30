@@ -1503,7 +1503,6 @@ async function init() {
     navigate(state.path);
   };
 
-  $('#btn-upload').onclick = () => $('#upload-input').click();
   $('#upload-input').onchange = (e) => {
     if (e.target.files.length) uploadFiles([...e.target.files]);
     e.target.value = '';
@@ -1529,6 +1528,7 @@ async function init() {
       $('#fab-menu').classList.add('hidden');
       if (btn.dataset.fab === 'mkdir') doMkdir();
       if (btn.dataset.fab === 'touch') doTouch();
+      if (btn.dataset.fab === 'upload') $('#upload-input').click();
       if (btn.dataset.fab === 'upload-folder') $('#upload-dir-input').click();
     };
   });

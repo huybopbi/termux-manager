@@ -56,7 +56,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - **Termux Midnight UI**: emerald dark surfaces, consistent SVG icons, compact mobile header
 - Browse with breadcrumb, parent `..`, Esc → up
 - Create folder/file (FAB), rename, delete, copy/cut/paste selection
-- Upload files or folders (button, FAB → Upload Folder, or drag-and-drop) with progress bar, download
+- Upload files or folders via FAB **+** (or drag-and-drop) with progress bar, download
 - Search under current directory
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
