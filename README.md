@@ -33,6 +33,7 @@ chmod +x $PREFIX/bin/manager
 ```bash
 manager                    # :9876, auto-open browser
 manager -port 8080
+manager -listen 0.0.0.0    # LAN / ngrok (or use Settings in the UI)
 manager -root $HOME
 manager -root /sdcard      # needs storage access
 manager -hidden            # show dotfiles
@@ -43,14 +44,16 @@ manager update             # download latest binary from GitHub Releases
 
 Stop with **Ctrl+C**. After `manager update`, restart the process to apply the new binary.
 
-Bind is **127.0.0.1 only**. From a PC: SSH tunnel, then open `http://127.0.0.1:<port>`.
+Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0.0.0`) to allow LAN / tunnel access. Preferences are saved to `~/.config/termux-manager/config.json`.
+
+**No auth** — if you expose the port on LAN or via ngrok, treat it as full access to the chosen root.
 
 ---
 
 ## Features
 
 ### File manager
-- **Termux Midnight UI**: emerald dark surfaces, consistent SVG icons, mobile bottom navigation
+- **Termux Midnight UI**: emerald dark surfaces, consistent SVG icons, compact mobile header
 - Browse with breadcrumb, parent `..`, Esc → up
 - Create folder/file (FAB), rename, delete, copy/cut/paste selection
 - Upload (button or drag-and-drop), download
@@ -59,6 +62,7 @@ Bind is **127.0.0.1 only**. From a PC: SSH tunnel, then open `http://127.0.0.1:<
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
 - **Image preview** (png/jpg/webp/…)
 - Hidden files toggle
+- **Settings**: listen address (localhost / all interfaces) and port; saved to `~/.config/termux-manager/config.json`
 
 ### Editor ([Ace](https://ace.c9.io/))
 - Virtualized editor (better with multi‑MB text than a plain textarea)
@@ -139,6 +143,7 @@ termux-manager/
 | GET/POST | `/api/read`, `/api/write` | Text edit |
 | GET | `/api/download?path=&inline=1` | Download / inline preview |
 | GET | `/api/info` | Root, Termux flags, `quick_paths` |
+| GET/PUT | `/api/settings` | Listen address + port (persisted) |
 | POST | `/api/root` | Switch browse root (quick path) |
 | POST | `/api/untar` | Extract `.tar` / `.tar.gz` / `.tgz` |
 | POST | `/api/unzip` | Extract `.zip` |
@@ -164,7 +169,7 @@ DB panel: toolbar **DB**, or context menu **Open as DB** on `.db` / `.sqlite` / 
 
 ## Security
 
-Listens on **localhost only**. No auth by default. If you tunnel or proxy the port, treat it as full access to the chosen root.
+Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `-listen`) for LAN/ngrok. **No auth** by default — treat any non-localhost exposure as full access to the chosen root.
 
 ---
 
@@ -185,6 +190,7 @@ Listens on **localhost only**. No auth by default. If you tunnel or proxy the po
 - [x] URL hash path persistence (F5 restores current directory)
 - [x] GitHub Releases with pre-built binaries (android-arm64, android-arm, linux-amd64, windows-amd64)
 - [x] `manager update` — self-update from latest GitHub Release
+- [x] Settings UI + `-listen` / config for LAN & tunnel bind (`0.0.0.0`)
 
 ### Planned
 - [ ] Basic auth (`-auth`)

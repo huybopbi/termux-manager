@@ -21,6 +21,10 @@ type Server struct {
 	Root        string
 	InitialRoot string
 	ShowHidden  bool
+	Listen      string
+	Port        int
+	// Relisten, if set, rebinds the HTTP server after settings change.
+	Relisten func(listen string, port int) error
 }
 
 func (s *Server) quickPaths() []termux.QuickPath {
@@ -453,6 +457,8 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 		"has_storage": termux.HasStorageAccess(),
 		"show_hidden": s.ShowHidden,
 		"quick_paths": s.quickPaths(),
+		"listen":      s.Listen,
+		"port":        s.Port,
 	})
 }
 

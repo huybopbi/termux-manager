@@ -29,6 +29,7 @@ func (s *Server) Routes(static embed.FS) http.Handler {
 	mux.HandleFunc("/api/tar", s.method("POST", s.handleTar))
 	mux.HandleFunc("/api/info", s.method("GET", s.handleInfo))
 	mux.HandleFunc("/api/root", s.method("POST", s.handleSetRoot))
+	mux.HandleFunc("/api/settings", s.handleSettings)
 	mux.HandleFunc("/api/terminal/sessions", s.handleTermSessionsAPI)
 
 	// Database browser

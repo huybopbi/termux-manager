@@ -7,13 +7,18 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
+	"github.com/huybopbi/termux-manager/config"
 	"github.com/huybopbi/termux-manager/server"
 	"github.com/huybopbi/termux-manager/termux"
 )
@@ -113,13 +118,56 @@ func selfUpdate() {
 	fmt.Printf("✓ Updated to %s — restart manager to apply\n", rel.TagName)
 }
 
+type httpListener struct {
+	mu      sync.Mutex
+	server  *http.Server
+	handler http.Handler
+}
+
+func (h *httpListener) start(listen string, port int) error {
+	addr := net.JoinHostPort(listen, strconv.Itoa(port))
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	srv := &http.Server{Addr: addr, Handler: h.handler}
+	h.mu.Lock()
+	old := h.server
+	h.server = srv
+	h.mu.Unlock()
+	go func() {
+		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+			log.Printf("http serve: %v", err)
+		}
+	}()
+	if old != nil {
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			_ = old.Close()
+		}()
+	}
+	return nil
+}
+
+func (h *httpListener) close() {
+	h.mu.Lock()
+	srv := h.server
+	h.mu.Unlock()
+	if srv != nil {
+		_ = srv.Close()
+	}
+}
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "update" {
 		selfUpdate()
 		return
 	}
 
-	port := flag.Int("port", 9876, "Port to listen on")
+	cfg := config.Load()
+
+	listen := flag.String("listen", cfg.Listen, "Listen address (127.0.0.1 or 0.0.0.0 for LAN/ngrok)")
+	port := flag.Int("port", cfg.Port, "Port to listen on")
 	root := flag.String("root", "", "Root directory (default: $HOME)")
 	hidden := flag.Bool("hidden", false, "Show hidden files")
 	noOpen := flag.Bool("no-open", false, "Don't open browser automatically")
@@ -131,7 +179,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Resolve root
 	rootDir := *root
 	if rootDir == "" {
 		home, err := os.UserHomeDir()
@@ -141,46 +188,56 @@ func main() {
 		rootDir = home
 	}
 
-	// Ensure root exists
 	if _, err := os.Stat(rootDir); err != nil {
 		log.Fatalf("Root directory %q does not exist: %v", rootDir, err)
 	}
 
+	hl := &httpListener{}
 	srv := &server.Server{
 		Root:        rootDir,
 		InitialRoot: rootDir,
 		ShowHidden:  *hidden,
+		Listen:      *listen,
+		Port:        *port,
+	}
+	srv.Relisten = func(host string, p int) error {
+		fmt.Printf("Rebinding to %s:%d …\n", host, p)
+		if err := hl.start(host, p); err != nil {
+			return err
+		}
+		fmt.Printf("Listening on http://%s\n", server.FormatAddr(host, p))
+		return nil
 	}
 
-	addr := fmt.Sprintf("127.0.0.1:%d", *port)
-	url := fmt.Sprintf("http://%s", addr)
+	hl.handler = srv.Routes(staticFiles)
 
-	handler := srv.Routes(staticFiles)
-
-	httpServer := &http.Server{
-		Addr:    addr,
-		Handler: handler,
+	if err := hl.start(*listen, *port); err != nil {
+		log.Fatal(err)
 	}
 
-	// Graceful shutdown on Ctrl+C / kill
+	done := make(chan struct{})
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 		<-c
 		fmt.Println("\nShutting down...")
-		httpServer.Close()
+		hl.close()
+		close(done)
 	}()
 
+	localURL := "http://" + server.FormatAddr(*listen, *port)
 	fmt.Printf("termux-manager v%s\n", version)
-	fmt.Printf("Root : %s\n", rootDir)
-	fmt.Printf("URL  : %s\n", url)
+	fmt.Printf("Root   : %s\n", rootDir)
+	fmt.Printf("Listen : %s:%d\n", *listen, *port)
+	fmt.Printf("URL    : %s\n", localURL)
+	if *listen == "0.0.0.0" || *listen == "::" {
+		fmt.Println("Note   : Bound on all interfaces — reachable via LAN IP / tunnels. No auth.")
+	}
 	fmt.Println("Press Ctrl+C to stop")
 
 	if !*noOpen {
-		go termux.OpenURL(url)
+		go termux.OpenURL(localURL)
 	}
 
-	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
-	}
+	<-done
 }

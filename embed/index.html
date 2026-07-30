@@ -24,6 +24,7 @@
     <symbol id="i-disconnect" viewBox="0 0 24 24"><path d="M12 3v9m-5-5a8 8 0 1 0 10 0"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></symbol>
   </svg>
   <div id="app">
     <header id="header">
@@ -40,6 +41,7 @@
         <button id="btn-hidden" class="icon-btn" title="Toggle hidden files"><svg><use href="#i-eye"/></svg><span class="nav-label">Hidden</span></button>
         <button id="btn-upload" class="icon-btn" title="Upload"><svg><use href="#i-upload"/></svg><span class="nav-label">Upload</span></button>
         <button id="btn-db" class="icon-btn" title="Database"><svg><use href="#i-database"/></svg><span class="nav-label">Database</span></button>
+        <button id="btn-settings" class="icon-btn" title="Settings"><svg><use href="#i-settings"/></svg><span class="nav-label">Settings</span></button>
         <button id="btn-terminal" class="icon-btn" title="Show/hide terminal (keeps sessions)"><svg><use href="#i-terminal"/></svg><span class="nav-label">Terminal</span></button>
         <button id="btn-term-popout" class="icon-btn" title="Terminal in new tab" aria-label="Terminal in new tab"><svg><use href="#i-external"/></svg></button>
       </div>
@@ -97,6 +99,37 @@
       </div>
       <div id="places-list"></div>
       <div id="places-current"></div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="settings-overlay" class="hidden">
+    <div id="settings-sheet">
+      <div id="settings-header">
+        <span>Settings</span>
+        <button id="settings-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div id="settings-body">
+        <label class="settings-field">
+          <span class="settings-label">Listen address</span>
+          <select id="settings-listen">
+            <option value="127.0.0.1">Localhost only (safe)</option>
+            <option value="0.0.0.0">All interfaces (LAN / ngrok)</option>
+          </select>
+        </label>
+        <label class="settings-field">
+          <span class="settings-label">Port</span>
+          <input id="settings-port" type="number" min="1" max="65535" step="1" />
+        </label>
+        <p id="settings-hint" class="settings-hint">
+          Localhost: only this device. All interfaces: other LAN devices and tunnels (ngrok) can connect.
+          There is no password — treat LAN/tunnel access as full file access.
+        </p>
+        <p id="settings-meta" class="settings-meta"></p>
+      </div>
+      <div id="settings-actions">
+        <button id="settings-save" class="primary">Save</button>
+      </div>
     </div>
   </div>
 

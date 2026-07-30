@@ -452,6 +452,84 @@ input:focus, textarea:focus { border-color: var(--accent); }
   word-break: break-all;
 }
 
+/* ── Settings ─────────────────────────────────────────── */
+#settings-overlay {
+  position: fixed; inset: 0;
+  background: rgba(3,7,10,0.72);
+  backdrop-filter: blur(6px);
+  z-index: 96;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+#settings-sheet {
+  background: linear-gradient(180deg, var(--surface2), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  width: min(480px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  animation: places-up 0.18s ease-out;
+}
+#settings-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+#settings-body {
+  padding: 8px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings-label {
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+}
+#settings-listen,
+#settings-port {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 14px;
+}
+.settings-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text2);
+}
+.settings-meta {
+  font-size: 11px;
+  color: var(--muted, var(--text2));
+  word-break: break-all;
+}
+#settings-actions {
+  padding: 8px 16px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+#settings-save {
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #04110a;
+  font-weight: 600;
+}
+#settings-save:hover { filter: brightness(1.05); }
+
 /* ── Image preview ────────────────────────────────────── */
 #preview-overlay {
   position: fixed; inset: 0;

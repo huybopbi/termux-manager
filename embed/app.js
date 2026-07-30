@@ -52,6 +52,8 @@ const api = {
   untar:    (path, dest)       => api.post('/api/untar', { path, dest }),
   info:     ()                 => api.get('/api/info'),
   setRoot:  (path)             => api.post('/api/root', { path }),
+  settings: ()                 => api.get('/api/settings'),
+  saveSettings: (body)         => api.call('PUT', '/api/settings', body),
   share:    (path)             => api.post('/api/termux/share', { path }),
   clipboard: (text)            => api.post('/api/termux/clipboard', { text }),
   exec:     (cmd)              => api.post('/api/termux/exec', { cmd }),
@@ -535,6 +537,47 @@ function openFile(file) {
   }
   // Non-editable: trigger download
   window.location.href = `/api/download?path=${enc(file.path)}`;
+}
+
+/* ── Settings ─────────────────────────────────────────── */
+async function openSettings() {
+  const res = await api.settings();
+  if (!res.ok) { toast(res.error || 'Failed to load settings', 'error'); return; }
+  const d = res.data;
+  const sel = $('#settings-listen');
+  if (![...sel.options].some(o => o.value === d.listen)) {
+    const opt = document.createElement('option');
+    opt.value = d.listen;
+    opt.textContent = d.listen;
+    sel.appendChild(opt);
+  }
+  sel.value = d.listen || '127.0.0.1';
+  $('#settings-port').value = d.port || 9876;
+  $('#settings-meta').textContent = d.config_path
+    ? 'Saved to ' + d.config_path
+    : '';
+  $('#settings-overlay').classList.remove('hidden');
+}
+
+function closeSettings() {
+  $('#settings-overlay').classList.add('hidden');
+}
+
+async function saveSettings() {
+  const listen = $('#settings-listen').value;
+  const port = parseInt($('#settings-port').value, 10);
+  if (!port || port < 1 || port > 65535) {
+    toast('Invalid port', 'error');
+    return;
+  }
+  const res = await api.saveSettings({ listen, port });
+  if (!res.ok) { toast(res.error || 'Save failed', 'error'); return; }
+  closeSettings();
+  if (res.data && res.data.relisten) {
+    toast('Saved — rebinding server…', 'success');
+  } else {
+    toast('Settings saved', 'success');
+  }
 }
 
 /* ── Quick paths ──────────────────────────────────────── */
@@ -1258,6 +1301,12 @@ async function init() {
   $('#places-overlay').onclick = (e) => {
     if (e.target === $('#places-overlay')) closePlaces();
   };
+  $('#btn-settings').onclick = openSettings;
+  $('#settings-close').onclick = closeSettings;
+  $('#settings-save').onclick = saveSettings;
+  $('#settings-overlay').onclick = (e) => {
+    if (e.target === $('#settings-overlay')) closeSettings();
+  };
   $('#preview-close').onclick = closePreview;
   $('#preview-body').onclick = (e) => {
     if (e.target === $('#preview-body')) closePreview();
@@ -1399,6 +1448,10 @@ async function init() {
       }
       if (!$('#places-overlay').classList.contains('hidden')) {
         closePlaces();
+        return;
+      }
+      if (!$('#settings-overlay').classList.contains('hidden')) {
+        closeSettings();
         return;
       }
       if (isEditorOpen()) {
