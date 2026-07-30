@@ -165,6 +165,7 @@ function fileTypeInfo(file) {
     csv:  { kind: 'text', badge: 'CSV', tag: 'Data', glyph: '#' },
     conf: { kind: 'text', badge: 'CFG', tag: 'Config', glyph: '⚙' },
     cfg:  { kind: 'text', badge: 'CFG', tag: 'Config', glyph: '⚙' },
+    bak:  { kind: 'text', badge: 'BAK', tag: 'Backup', glyph: '≡' },
     ini:  { kind: 'text', badge: 'INI', tag: 'Config', glyph: '⚙' },
     env:  { kind: 'text', badge: 'ENV', tag: 'Config', glyph: '⚙' },
   };
@@ -204,7 +205,7 @@ function isEditable(file) {
   if (!ext) return true;
   const editable = ['txt','md','json','yaml','yml','toml','sh','bash',
     'js','ts','css','html','py','go','php','c','cpp','h','rs','java',
-    'kt','conf','cfg','ini','env','log','csv','xml','sql',
+    'kt','conf','cfg','bak','ini','env','log','csv','xml','sql',
     'gitignore','dockerignore','editorconfig','npmrc','prettierrc'];
   return editable.includes(ext);
 }
@@ -802,7 +803,7 @@ function aceModeFor(file) {
     kt: 'ace/mode/kotlin', kts: 'ace/mode/kotlin',
     sql: 'ace/mode/sql',
     ini: 'ace/mode/ini', conf: 'ace/mode/ini', cfg: 'ace/mode/ini', env: 'ace/mode/sh',
-    txt: 'ace/mode/text', log: 'ace/mode/text',
+    txt: 'ace/mode/text', log: 'ace/mode/text', bak: 'ace/mode/text',
   };
   return map[ext] || 'ace/mode/text';
 }
