@@ -49,6 +49,7 @@ Bind is **127.0.0.1 only**. From a PC: SSH tunnel, then open `http://127.0.0.1:<
 ## Features
 
 ### File manager
+- **Termux Midnight UI**: emerald dark surfaces, consistent SVG icons, mobile bottom navigation
 - Browse with breadcrumb, parent `..`, Esc → up
 - Create folder/file (FAB), rename, delete, copy/cut/paste selection
 - Upload (button or drag-and-drop), download
@@ -179,6 +180,7 @@ Listens on **localhost only**. No auth by default. If you tunnel or proxy the po
 - [x] Editor extras: dirty ●, Ctrl+S, find/replace, goto, wrap, font ±, undo/redo
 - [x] Terminal: Nerd Font, mobile Copy/Paste, popout `/term.html`, clean `SSH_*` env
 - [x] DB panel: connect MySQL/MariaDB + SQLite, browse/edit rows (PK), SQL console
+- [x] Termux Midnight theme: refined dark surfaces, SVG icon system, mobile bottom navigation
 
 ### Planned
 - [ ] Basic auth (`-auth`)

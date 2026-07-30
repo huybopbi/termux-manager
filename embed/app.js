@@ -497,6 +497,10 @@ async function navigate(path) {
   updateSelectionBar();
   setLoading(true);
 
+  // Persist current path in URL hash so F5 restores it
+  const hash = path ? '#' + encodeURIComponent(path) : '#';
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+
   const res = await api.list(path);
   setLoading(false);
 
@@ -1241,8 +1245,9 @@ async function init() {
     applyRootInfo(info.data);
   }
 
-  // Initial load
-  navigate('');
+  // Initial load — restore path from URL hash if present
+  const initPath = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
+  navigate(initPath);
 
   if (typeof initDBPanel === 'function') initDBPanel();
 

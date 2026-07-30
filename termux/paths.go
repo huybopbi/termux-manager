@@ -46,6 +46,7 @@ func QuickPaths() []QuickPath {
 	}
 
 	add("home", "Home", home)
+	add("termux-data", "Termux Data", "/data/data/com.termux/files")
 
 	if IsTermux() || dirOK("/sdcard") {
 		add("sdcard", "Storage", "/sdcard")

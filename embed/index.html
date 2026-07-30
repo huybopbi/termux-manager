@@ -9,23 +9,39 @@
   <link rel="stylesheet" href="/terminal.css" />
 </head>
 <body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden">
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/><path d="M9 12h10"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 15v4h16v-4"/></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m6 0h4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6H5V6h6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12m0 0 5-5m-5 5-5-5"/><path d="M4 20h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 6v5h-5"/><path d="M18.5 15A8 8 0 1 1 20 11"/></symbol>
+    <symbol id="i-disconnect" viewBox="0 0 24 24"><path d="M12 3v9m-5-5a8 8 0 1 0 10 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></symbol>
+  </svg>
   <div id="app">
     <header id="header">
       <div id="header-left">
-        <button id="btn-back" class="icon-btn hidden" title="Go back">←</button>
-        <button id="btn-places" class="icon-btn" title="Quick paths">☰</button>
+        <button id="btn-back" class="icon-btn hidden" title="Go back" aria-label="Go back"><svg><use href="#i-arrow-left"/></svg></button>
+        <button id="btn-places" class="icon-btn" title="Quick paths" aria-label="Quick paths"><svg><use href="#i-menu"/></svg></button>
         <span id="app-title">termux-manager</span>
       </div>
       <div id="breadcrumb-wrap">
         <div id="breadcrumb"></div>
       </div>
       <div id="header-right">
-        <button id="btn-search" class="icon-btn" title="Search">⌕</button>
-        <button id="btn-hidden" class="icon-btn" title="Toggle hidden files">◎</button>
-        <button id="btn-upload" class="icon-btn" title="Upload">↑</button>
-        <button id="btn-db" class="icon-btn" title="Database">DB</button>
-        <button id="btn-terminal" class="icon-btn" title="Show/hide terminal (keeps sessions)">⌨</button>
-        <button id="btn-term-popout" class="icon-btn" title="Terminal in new tab">↗</button>
+        <button id="btn-search" class="icon-btn" title="Search"><svg><use href="#i-search"/></svg><span class="nav-label">Search</span></button>
+        <button id="btn-hidden" class="icon-btn" title="Toggle hidden files"><svg><use href="#i-eye"/></svg><span class="nav-label">Hidden</span></button>
+        <button id="btn-upload" class="icon-btn" title="Upload"><svg><use href="#i-upload"/></svg><span class="nav-label">Upload</span></button>
+        <button id="btn-db" class="icon-btn" title="Database"><svg><use href="#i-database"/></svg><span class="nav-label">Database</span></button>
+        <button id="btn-terminal" class="icon-btn" title="Show/hide terminal (keeps sessions)"><svg><use href="#i-terminal"/></svg><span class="nav-label">Terminal</span></button>
+        <button id="btn-term-popout" class="icon-btn" title="Terminal in new tab" aria-label="Terminal in new tab"><svg><use href="#i-external"/></svg></button>
       </div>
     </header>
 
@@ -89,8 +105,8 @@
     <div id="preview-header">
       <span id="preview-filename"></span>
       <div id="preview-actions">
-        <a id="preview-download" class="icon-btn" title="Download" download>↓</a>
-        <button id="preview-close" class="icon-btn" title="Close">✕</button>
+        <a id="preview-download" class="icon-btn" title="Download" aria-label="Download" download><svg><use href="#i-download"/></svg></a>
+        <button id="preview-close" class="icon-btn" title="Close" aria-label="Close"><svg><use href="#i-close"/></svg></button>
       </div>
     </div>
     <div id="preview-body">
@@ -113,7 +129,7 @@
   <!-- Editor -->
   <div id="editor-overlay" class="hidden">
     <div id="editor-header">
-      <button id="editor-back" class="icon-btn" title="Back">←</button>
+      <button id="editor-back" class="icon-btn" title="Back" aria-label="Back"><svg><use href="#i-arrow-left"/></svg></button>
       <span id="editor-filename"></span>
       <span id="editor-dirty" class="hidden" title="Unsaved changes">●</span>
       <div id="editor-actions">
@@ -150,11 +166,11 @@
   <!-- DB browser -->
   <div id="db-overlay" class="hidden">
     <div id="db-header">
-      <button id="db-back" class="icon-btn" title="Back">←</button>
+      <button id="db-back" class="icon-btn" title="Back" aria-label="Back"><svg><use href="#i-arrow-left"/></svg></button>
       <span id="db-title">Database</span>
       <div id="db-header-actions">
-        <button id="db-refresh" class="icon-btn" title="Refresh">↻</button>
-        <button id="db-disconnect" class="icon-btn" title="Disconnect">⏏</button>
+        <button id="db-refresh" class="icon-btn" title="Refresh" aria-label="Refresh"><svg><use href="#i-refresh"/></svg></button>
+        <button id="db-disconnect" class="icon-btn" title="Disconnect" aria-label="Disconnect"><svg><use href="#i-disconnect"/></svg></button>
       </div>
     </div>
 
@@ -230,10 +246,10 @@
     <div id="term-header">
       <div id="term-tabs"></div>
       <div id="term-header-actions">
-        <button id="btn-term-new" class="icon-btn" title="New tab">+</button>
-        <button id="btn-term-popout-panel" class="icon-btn" title="Open in new tab">↗</button>
-        <button id="btn-term-resize" class="icon-btn" title="Expand/shrink">⤢</button>
-        <button id="btn-term-close" class="icon-btn" title="Kill all sessions & close">✕</button>
+        <button id="btn-term-new" class="icon-btn" title="New tab" aria-label="New tab"><svg><use href="#i-plus"/></svg></button>
+        <button id="btn-term-popout-panel" class="icon-btn" title="Open in new tab" aria-label="Open in new tab"><svg><use href="#i-external"/></svg></button>
+        <button id="btn-term-resize" class="icon-btn" title="Expand/shrink" aria-label="Expand/shrink"><svg><use href="#i-expand"/></svg></button>
+        <button id="btn-term-close" class="icon-btn" title="Kill all sessions & close" aria-label="Kill all sessions and close"><svg><use href="#i-close"/></svg></button>
       </div>
     </div>
     <div id="term-body">
