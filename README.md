@@ -38,9 +38,10 @@ manager -root /sdcard      # needs storage access
 manager -hidden            # show dotfiles
 manager -no-open
 manager -version
+manager update             # download latest binary from GitHub Releases
 ```
 
-Stop with **Ctrl+C**.
+Stop with **Ctrl+C**. After `manager update`, restart the process to apply the new binary.
 
 Bind is **127.0.0.1 only**. From a PC: SSH tunnel, then open `http://127.0.0.1:<port>`.
 
@@ -183,6 +184,7 @@ Listens on **localhost only**. No auth by default. If you tunnel or proxy the po
 - [x] Termux Midnight theme: refined dark surfaces, SVG icon system, top header nav on mobile
 - [x] URL hash path persistence (F5 restores current directory)
 - [x] GitHub Releases with pre-built binaries (android-arm64, android-arm, linux-amd64, windows-amd64)
+- [x] `manager update` — self-update from latest GitHub Release
 
 ### Planned
 - [ ] Basic auth (`-auth`)
