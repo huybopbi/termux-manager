@@ -10,7 +10,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -44,78 +46,158 @@ func assetName() string {
 	}
 }
 
+// findTool locates curl/wget. Prefer PATH, then Termux $PREFIX/bin.
+// External tools use the system DNS resolver (unlike pure-Go net with CGO_ENABLED=0).
+func findTool(name string) string {
+	if p, err := exec.LookPath(name); err == nil {
+		return p
+	}
+	candidates := []string{}
+	if prefix := os.Getenv("PREFIX"); prefix != "" {
+		candidates = append(candidates, filepath.Join(prefix, "bin", name))
+	}
+	candidates = append(candidates, "/data/data/com.termux/files/usr/bin/"+name)
+	for _, p := range candidates {
+		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+			return p
+		}
+	}
+	return ""
+}
+
+func fetchURL(url string) ([]byte, error) {
+	if curl := findTool("curl"); curl != "" {
+		out, err := exec.Command(curl, "-fsSL", url).Output()
+		if err == nil {
+			return out, nil
+		}
+	}
+	if wget := findTool("wget"); wget != "" {
+		out, err := exec.Command(wget, "-qO-", url).Output()
+		if err == nil {
+			return out, nil
+		}
+	}
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("HTTP %s", resp.Status)
+	}
+	return io.ReadAll(resp.Body)
+}
+
+func downloadURL(url, dest string) error {
+	_ = os.Remove(dest)
+	if curl := findTool("curl"); curl != "" {
+		cmd := exec.Command(curl, "-fL", "--progress-bar", "-o", dest, url)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err == nil {
+			return os.Chmod(dest, 0o755)
+		}
+	}
+	if wget := findTool("wget"); wget != "" {
+		cmd := exec.Command(wget, "--show-progress", "-qO", dest, url)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err == nil {
+			return os.Chmod(dest, 0o755)
+		}
+	}
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("HTTP %s", resp.Status)
+	}
+	f, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(f, resp.Body)
+	closeErr := f.Close()
+	if copyErr != nil {
+		os.Remove(dest)
+		return copyErr
+	}
+	if closeErr != nil {
+		os.Remove(dest)
+		return closeErr
+	}
+	return nil
+}
+
 func selfUpdate() {
 	fmt.Println("Checking for updates...")
 
-	resp, err := http.Get("https://api.github.com/repos/" + repo + "/releases/latest")
-	if err != nil {
-		log.Fatal("Cannot reach GitHub:", err)
-	}
-	defer resp.Body.Close()
+	name := assetName()
+	apiURL := "https://api.github.com/repos/" + repo + "/releases/latest"
+	// Stable redirect URL — works even if API JSON parse fails
+	latestURL := "https://github.com/" + repo + "/releases/latest/download/" + name
 
-	var rel struct {
-		TagName string `json:"tag_name"`
-		Assets  []struct {
-			Name               string `json:"name"`
-			BrowserDownloadURL string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		log.Fatal("Cannot parse release info:", err)
+	tag := ""
+	if body, err := fetchURL(apiURL); err == nil {
+		var rel struct {
+			TagName string `json:"tag_name"`
+			Assets  []struct {
+				Name               string `json:"name"`
+				BrowserDownloadURL string `json:"browser_download_url"`
+			} `json:"assets"`
+		}
+		if json.Unmarshal(body, &rel) == nil && rel.TagName != "" {
+			tag = rel.TagName
+			for _, a := range rel.Assets {
+				if a.Name == name && a.BrowserDownloadURL != "" {
+					latestURL = a.BrowserDownloadURL
+					break
+				}
+			}
+		}
+	} else {
+		fmt.Println("Note: GitHub API unreachable via Go DNS; using curl/wget /latest/download …")
 	}
 
-	if rel.TagName == "" {
-		log.Fatal("No release found")
-	}
-
-	if strings.TrimPrefix(rel.TagName, "v") == strings.TrimPrefix(version, "v") {
-		fmt.Printf("Already up to date (%s)\n", rel.TagName)
+	if tag != "" && strings.TrimPrefix(tag, "v") == strings.TrimPrefix(version, "v") {
+		fmt.Printf("Already up to date (%s)\n", tag)
 		return
 	}
 
-	name := assetName()
-	var downloadURL string
-	for _, a := range rel.Assets {
-		if a.Name == name {
-			downloadURL = a.BrowserDownloadURL
-			break
-		}
+	if tag != "" {
+		fmt.Printf("Updating %s → %s\n", version, tag)
+	} else {
+		fmt.Printf("Updating %s → latest (%s)\n", version, name)
 	}
-	if downloadURL == "" {
-		log.Fatalf("No asset %q found in release %s", name, rel.TagName)
-	}
-
-	fmt.Printf("Updating %s → %s\n", version, rel.TagName)
 
 	exe, err := os.Executable()
 	if err != nil {
 		log.Fatal("Cannot find executable path:", err)
 	}
-
-	dlResp, err := http.Get(downloadURL)
+	exe, err = filepath.EvalSymlinks(exe)
 	if err != nil {
-		log.Fatal("Download failed:", err)
+		log.Fatal("Cannot resolve executable path:", err)
 	}
-	defer dlResp.Body.Close()
 
 	tmp := exe + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-	if err != nil {
-		log.Fatal("Cannot write temp file:", err)
-	}
-	if _, err := io.Copy(f, dlResp.Body); err != nil {
-		f.Close()
+	fmt.Println("Downloading", latestURL)
+	if err := downloadURL(latestURL, tmp); err != nil {
 		os.Remove(tmp)
-		log.Fatal("Download error:", err)
+		log.Fatal("Download failed:", err)
 	}
-	f.Close()
 
 	if err := os.Rename(tmp, exe); err != nil {
 		os.Remove(tmp)
 		log.Fatal("Cannot replace binary:", err)
 	}
 
-	fmt.Printf("✓ Updated to %s — restart manager to apply\n", rel.TagName)
+	if tag == "" {
+		tag = "latest"
+	}
+	fmt.Printf("✓ Updated to %s — restart manager to apply\n", tag)
 }
 
 type httpListener struct {

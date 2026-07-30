@@ -39,7 +39,7 @@ manager -root /sdcard      # needs storage access
 manager -hidden            # show dotfiles
 manager -no-open
 manager -version
-manager update             # download latest binary from GitHub Releases
+manager update             # download latest binary (uses curl/wget on Termux)
 ```
 
 Stop with **Ctrl+C**. After `manager update`, restart the process to apply the new binary.
