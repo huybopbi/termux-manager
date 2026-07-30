@@ -188,7 +188,7 @@ Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `
 - [x] DB panel: connect MySQL/MariaDB + SQLite, browse/edit rows (PK), SQL console
 - [x] Termux Midnight theme: refined dark surfaces, SVG icon system, top header nav on mobile
 - [x] URL hash path persistence (F5 restores current directory)
-- [x] GitHub Releases with pre-built binaries (android-arm64, android-arm, linux-amd64, windows-amd64)
+- [x] GitHub Releases with pre-built binaries (android-arm64, android-arm, linux-amd64, linux-arm64, darwin-arm64)
 - [x] `manager update` — self-update from latest GitHub Release
 - [x] Settings UI + `-listen` / config for LAN & tunnel bind (`0.0.0.0`)
 
