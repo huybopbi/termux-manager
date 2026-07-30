@@ -216,7 +216,6 @@ func (s *Server) handleDBRows(w http.ResponseWriter, r *http.Request) {
 
 // POST|PUT|DELETE /api/db/row
 func (s *Server) handleDBRow(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, "+dbSessionHeader)
 	if r.Method == http.MethodOptions {

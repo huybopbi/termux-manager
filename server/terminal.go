@@ -391,7 +391,6 @@ func (s *Server) TerminalHandler() http.Handler {
 
 // GET/DELETE /api/terminal/sessions[?id=...]
 func (s *Server) handleTermSessionsAPI(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	switch r.Method {
 	case http.MethodGet:
 		s.ok(w, terms.list())

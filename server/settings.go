@@ -14,7 +14,6 @@ import (
 
 // GET|PUT /api/settings
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	switch r.Method {
 	case http.MethodGet:
 		s.handleGetSettings(w, r)

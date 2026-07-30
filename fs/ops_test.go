@@ -32,3 +32,21 @@ func TestUntarGz(t *testing.T) {
 		t.Fatalf("ArchiveDestName: %q", ArchiveDestName("foo/bar.tar.gz"))
 	}
 }
+
+func TestWithin(t *testing.T) {
+	root := filepath.Join(string(filepath.Separator), "data", "home")
+	inside := filepath.Join(root, "docs", "a.txt")
+	sibling := filepath.Join(string(filepath.Separator), "data", "home-x", "secret")
+	if !Within(root, root) {
+		t.Fatal("root should be within itself")
+	}
+	if !Within(root, inside) {
+		t.Fatalf("%q should be within %q", inside, root)
+	}
+	if Within(root, sibling) {
+		t.Fatalf("%q must not be within %q", sibling, root)
+	}
+	if Within(root, filepath.Join(string(filepath.Separator), "etc", "passwd")) {
+		t.Fatal("escape path must be rejected")
+	}
+}

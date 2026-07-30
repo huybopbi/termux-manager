@@ -58,12 +58,11 @@ func (s *Server) Routes(static embed.FS) http.Handler {
 	}
 	mux.Handle("/", http.FileServer(http.FS(sub)))
 
-	return s.logging(mux)
+	return s.logging(s.guard(mux))
 }
 
 func (s *Server) method(m string, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.Method != m {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return

@@ -168,6 +168,10 @@ function fileTypeInfo(file) {
     bak:  { kind: 'text', badge: 'BAK', tag: 'Backup', glyph: '≡' },
     ini:  { kind: 'text', badge: 'INI', tag: 'Config', glyph: '⚙' },
     env:  { kind: 'text', badge: 'ENV', tag: 'Config', glyph: '⚙' },
+    pem:  { kind: 'text', badge: 'PEM', tag: 'Cert', glyph: '§' },
+    key:  { kind: 'text', badge: 'KEY', tag: 'Key', glyph: '§' },
+    crt:  { kind: 'text', badge: 'CRT', tag: 'Cert', glyph: '§' },
+    cer:  { kind: 'text', badge: 'CER', tag: 'Cert', glyph: '§' },
   };
 
   if (byExt[ext]) return byExt[ext];
@@ -206,6 +210,7 @@ function isEditable(file) {
   const editable = ['txt','md','json','yaml','yml','toml','sh','bash',
     'js','ts','css','html','py','go','php','c','cpp','h','rs','java',
     'kt','conf','cfg','bak','ini','env','log','csv','xml','sql',
+    'pem','key','crt','cer',
     'gitignore','dockerignore','editorconfig','npmrc','prettierrc'];
   return editable.includes(ext);
 }
@@ -220,6 +225,18 @@ function isVideo(file) {
   if (!file || file.is_dir) return false;
   const ext = (file.ext || '').toLowerCase();
   return ['mp4','webm','ogg','ogv','m4v','mov','mkv','avi'].includes(ext);
+}
+
+function isPDF(file) {
+  if (!file || file.is_dir) return false;
+  return (file.ext || '').toLowerCase() === 'pdf';
+}
+
+function isMarkdown(file) {
+  if (!file || file.is_dir) return false;
+  const ext = (file.ext || '').toLowerCase();
+  const name = (file.name || '').toLowerCase();
+  return ext === 'md' || ext === 'markdown' || name === 'readme';
 }
 
 function videoMime(ext) {
@@ -551,6 +568,14 @@ function openFile(file) {
     openVideo(file);
     return;
   }
+  if (isPDF(file)) {
+    openPDF(file);
+    return;
+  }
+  if (isMarkdown(file)) {
+    openMarkdown(file);
+    return;
+  }
   if (isArchive(file)) {
     doExtract(file);
     return;
@@ -656,9 +681,11 @@ async function switchRoot(path) {
   navigate('');
 }
 
-/* ── Media preview (image / Plyr video) ───────────────── */
+/* ── Media preview (image / Plyr video / PDF / Markdown) ─ */
 let plyrPlayer = null;
 let plyrLoadPromise = null;
+let markedLoadPromise = null;
+let previewEditFile = null;
 
 function loadPlyr() {
   if (window.Plyr) return Promise.resolve();
@@ -684,6 +711,42 @@ function loadPlyr() {
   return plyrLoadPromise;
 }
 
+function loadMarked() {
+  if (window.marked && typeof window.marked.parse === 'function') return Promise.resolve();
+  if (markedLoadPromise) return markedLoadPromise;
+  markedLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => {
+      markedLoadPromise = null;
+      reject(new Error('Failed to load marked'));
+    };
+    document.head.appendChild(s);
+  });
+  return markedLoadPromise;
+}
+
+function sanitizeMarkdownHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('script,iframe,object,embed,link,meta,form').forEach(el => el.remove());
+  doc.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const val = (attr.value || '').trim();
+      if (name.startsWith('on') || name === 'srcdoc') {
+        el.removeAttribute(attr.name);
+        return;
+      }
+      if ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+          /^\s*javascript:/i.test(val)) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+
 function destroyPlyr() {
   if (plyrPlayer) {
     try { plyrPlayer.destroy(); } catch (_) {}
@@ -698,31 +761,51 @@ function destroyPlyr() {
   }
 }
 
-function openPreview(file) {
+function resetPreviewPanes() {
   destroyPlyr();
+  const img = $('#preview-img');
+  img.classList.add('hidden');
+  img.removeAttribute('src');
+  $('#preview-video-wrap').classList.add('hidden');
+  const pdf = $('#preview-pdf');
+  pdf.classList.add('hidden');
+  pdf.removeAttribute('src');
+  const md = $('#preview-md');
+  md.classList.add('hidden');
+  md.innerHTML = '';
+  $('#preview-edit').classList.add('hidden');
+  previewEditFile = null;
+}
+
+function preparePreviewChrome(file, { edit = false } = {}) {
   state.previewPath = file.path;
   $('#preview-filename').textContent = file.name;
-  $('#preview-video-wrap').classList.add('hidden');
+  $('#preview-download').href = `/api/download?path=${enc(file.path)}`;
+  $('#preview-download').setAttribute('download', file.name);
+  if (edit) {
+    previewEditFile = file;
+    $('#preview-edit').classList.remove('hidden');
+  } else {
+    previewEditFile = null;
+    $('#preview-edit').classList.add('hidden');
+  }
+  $('#preview-overlay').classList.remove('hidden');
+}
+
+function openPreview(file) {
+  resetPreviewPanes();
+  preparePreviewChrome(file);
   const img = $('#preview-img');
   img.classList.remove('hidden');
   img.onload = () => {};
   img.onerror = () => toast('Failed to load image', 'error');
   img.src = `/api/download?path=${enc(file.path)}&inline=1`;
-  $('#preview-download').href = `/api/download?path=${enc(file.path)}`;
-  $('#preview-download').setAttribute('download', file.name);
-  $('#preview-overlay').classList.remove('hidden');
 }
 
 async function openVideo(file) {
-  destroyPlyr();
-  state.previewPath = file.path;
-  $('#preview-filename').textContent = file.name;
-  $('#preview-img').classList.add('hidden');
-  $('#preview-img').removeAttribute('src');
+  resetPreviewPanes();
+  preparePreviewChrome(file);
   $('#preview-video-wrap').classList.remove('hidden');
-  $('#preview-download').href = `/api/download?path=${enc(file.path)}`;
-  $('#preview-download').setAttribute('download', file.name);
-  $('#preview-overlay').classList.remove('hidden');
 
   const ext = (file.ext || '').toLowerCase();
   if (ext === 'mkv' || ext === 'avi') {
@@ -758,12 +841,52 @@ async function openVideo(file) {
   }
 }
 
+function openPDF(file) {
+  resetPreviewPanes();
+  preparePreviewChrome(file);
+  const pdf = $('#preview-pdf');
+  pdf.classList.remove('hidden');
+  pdf.onload = () => {};
+  pdf.onerror = () => toast('Failed to load PDF', 'error');
+  pdf.src = `/api/download?path=${enc(file.path)}&inline=1`;
+}
+
+async function openMarkdown(file) {
+  resetPreviewPanes();
+  preparePreviewChrome(file, { edit: true });
+  const md = $('#preview-md');
+  md.classList.remove('hidden');
+  md.innerHTML = '<p style="color:var(--text2)">Loading…</p>';
+
+  try {
+    await loadMarked();
+  } catch (_) {
+    toast('Markdown CDN unavailable — opening editor', 'error');
+    closePreview();
+    openEditor(file);
+    return;
+  }
+
+  const res = await api.read(file.path);
+  if (!res.ok) {
+    toast(res.error || 'Failed to read file', 'error');
+    closePreview();
+    return;
+  }
+  const text = typeof res.data === 'string' ? res.data : '';
+  try {
+    const raw = window.marked.parse(text, { breaks: true, gfm: true });
+    md.innerHTML = sanitizeMarkdownHtml(raw);
+  } catch (err) {
+    toast('Failed to render markdown', 'error');
+    md.textContent = text;
+  }
+}
+
 function closePreview() {
-  destroyPlyr();
+  resetPreviewPanes();
   $('#preview-overlay').classList.add('hidden');
   $('#preview-img').classList.remove('hidden');
-  $('#preview-img').removeAttribute('src');
-  $('#preview-video-wrap').classList.add('hidden');
   state.previewPath = '';
 }
 
@@ -870,7 +993,7 @@ function showCtxMenu(e, file) {
   if (isVideo(file)) {
     prevBtn.style.display = '';
     prevBtn.textContent = 'Play';
-  } else if (isImage(file)) {
+  } else if (isImage(file) || isPDF(file) || isMarkdown(file)) {
     prevBtn.style.display = '';
     prevBtn.textContent = 'Preview';
   } else {
@@ -927,6 +1050,7 @@ function aceModeFor(file) {
     sql: 'ace/mode/sql',
     ini: 'ace/mode/ini', conf: 'ace/mode/ini', cfg: 'ace/mode/ini', env: 'ace/mode/sh',
     txt: 'ace/mode/text', log: 'ace/mode/text', bak: 'ace/mode/text',
+    pem: 'ace/mode/text', key: 'ace/mode/text', crt: 'ace/mode/text', cer: 'ace/mode/text',
   };
   return map[ext] || 'ace/mode/text';
 }
@@ -1609,6 +1733,12 @@ async function init() {
     if (e.target === $('#settings-overlay')) closeSettings();
   };
   $('#preview-close').onclick = closePreview;
+  $('#preview-edit').onclick = () => {
+    const file = previewEditFile;
+    if (!file) return;
+    closePreview();
+    openEditor(file);
+  };
   $('#preview-body').onclick = (e) => {
     if (e.target === $('#preview-body')) closePreview();
   };
@@ -1694,6 +1824,8 @@ async function init() {
           break;
         case 'preview':
           if (isVideo(file)) openVideo(file);
+          else if (isPDF(file)) openPDF(file);
+          else if (isMarkdown(file)) openMarkdown(file);
           else openPreview(file);
           break;
         case 'edit':

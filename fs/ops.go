@@ -34,7 +34,7 @@ func List(root, relPath string, showHidden bool) (*ListResult, error) {
 	absPath = filepath.Clean(absPath)
 
 	// Security: ensure we stay within root
-	if !strings.HasPrefix(absPath, root) {
+	if !Within(root, absPath) {
 		absPath = root
 		relPath = ""
 	}
@@ -104,7 +104,7 @@ func Rename(root, oldRel, newName string) error {
 	}
 	newAbs := filepath.Join(filepath.Dir(oldAbs), newName)
 	// Ensure new path still within root
-	if !strings.HasPrefix(newAbs, root) {
+	if !Within(root, newAbs) {
 		return os.ErrInvalid
 	}
 	return os.Rename(oldAbs, newAbs)
@@ -244,8 +244,14 @@ func Unzip(root, relPath, destRel string) error {
 	}
 	defer r.Close()
 	for _, f := range r.File {
-		target := filepath.Join(dst, f.Name)
-		if !strings.HasPrefix(target, dst) {
+		name := filepath.Clean(filepath.FromSlash(f.Name))
+		if name == "." || name == "" || name == ".." ||
+			strings.HasPrefix(name, ".."+string(os.PathSeparator)) {
+			continue
+		}
+		target := filepath.Join(dst, name)
+		if rel, err := filepath.Rel(dst, target); err != nil || rel == ".." ||
+			strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 			continue // zip slip guard
 		}
 		if f.FileInfo().IsDir() {
@@ -380,10 +386,17 @@ func ArchiveDestName(relPath string) string {
 
 // --- helpers ---
 
+// Within reports whether abs is root or a path under root (separator-aware).
+func Within(root, abs string) bool {
+	root = filepath.Clean(root)
+	abs = filepath.Clean(abs)
+	return abs == root || strings.HasPrefix(abs, root+string(os.PathSeparator))
+}
+
 func safeJoin(root, rel string) string {
 	rel = filepath.Clean("/" + rel)
 	abs := filepath.Join(root, rel)
-	if !strings.HasPrefix(abs, root) {
+	if !Within(root, abs) {
 		return ""
 	}
 	return abs
@@ -406,7 +419,7 @@ func AbsPath(root, path string) (string, error) {
 			return "", fmt.Errorf("path outside root")
 		}
 	}
-	if abs != root && !strings.HasPrefix(abs, root+string(os.PathSeparator)) {
+	if !Within(root, abs) {
 		return "", fmt.Errorf("path outside root")
 	}
 	return abs, nil

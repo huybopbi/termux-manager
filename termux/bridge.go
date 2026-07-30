@@ -45,13 +45,3 @@ func RunCommand(command string) (string, error) {
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
-
-// Vibrate triggers haptic feedback (Termux API)
-func Vibrate(ms int) {
-	if IsTermux() {
-		exec.Command("termux-vibrate", "-d", strings.TrimSpace(
-			strings.Replace(strings.TrimSpace(strings.TrimRight(
-				strings.Repeat("0", ms/100), "0")), "", "0", 1),
-		)).Run()
-	}
-}

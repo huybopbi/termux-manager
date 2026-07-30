@@ -62,6 +62,8 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
 - **Image preview** (png/jpg/webp/…)
+- **PDF preview** (inline browser viewer)
+- **Markdown preview** (`.md` / `.markdown`; Edit opens Ace)
 - **Video play** via Plyr (CDN, lazy-loaded): mp4/webm/mov… ; mkv/avi may need download
 - Hidden files toggle in **Settings** (also `-hidden` / config)
 - **Settings**: listen address (localhost / all interfaces) and port; saved to `~/.config/termux-manager/config.json`
@@ -69,6 +71,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 ### Editor ([Ace](https://ace.c9.io/))
 - Virtualized editor (better with multi‑MB text than a plain textarea)
 - Syntax modes: shell, JS/TS, Python, Go, PHP, C/C++, Rust, JSON, YAML, Markdown, …
+- Also editable as text: `.pem` / `.key` / `.crt` / `.cer`, config backups, …
 - Save (Ctrl+S), find/replace, go to line, wrap, font size, undo/redo, dirty indicator
 - Files without extension open as text
 
@@ -173,6 +176,8 @@ DB panel: toolbar **DB**, or context menu **Open as DB** on `.db` / `.sqlite` / 
 
 Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `-listen`) for LAN/ngrok. **No auth** by default — treat any non-localhost exposure as full access to the chosen root.
 
+Same-origin UI only: the server rejects requests whose `Origin` does not match `Host`, and when bound to loopback it also rejects non-loopback `Host` values (DNS-rebinding). Cross-origin CORS headers are not set.
+
 ---
 
 ## Roadmap
@@ -197,6 +202,9 @@ Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `
 - [x] Upload folders (webkitdirectory + drag-drop, preserves relative paths)
 - [x] Streamed upload (MultipartReader) — large files without buffering into RAM
 - [x] Video playback with Plyr CDN (lazy-loaded)
+- [x] Path containment hardening (`Within` / zip-slip via `filepath.Rel`) + Origin/Host guard (no `ACAO:*`)
+- [x] PDF preview + Markdown rendered preview (marked CDN, lazy-loaded)
+- [x] Edit cert/key text files (`.pem` / `.key` / `.crt` / `.cer`)
 
 ### Planned
 - [ ] Basic auth (`-auth`)

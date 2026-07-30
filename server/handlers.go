@@ -158,7 +158,7 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(errs) > 0 {
-		s.fail(w, http.StatusInternalServerError, fmt.Errorf(strings.Join(errs, "; ")))
+		s.fail(w, http.StatusInternalServerError, fmt.Errorf("%s", strings.Join(errs, "; ")))
 		return
 	}
 	s.ok(w, nil)
@@ -271,7 +271,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	root := s.rootPath()
 	rel := r.URL.Query().Get("path")
 	abs := filepath.Join(root, filepath.Clean("/"+rel))
-	if !strings.HasPrefix(abs, root) {
+	if !fsops.Within(root, abs) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -301,7 +301,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	dirRel := r.URL.Query().Get("path")
 	root := s.rootPath()
 	dirAbs := filepath.Join(root, filepath.Clean("/"+dirRel))
-	if !strings.HasPrefix(dirAbs, root) {
+	if !fsops.Within(root, dirAbs) {
 		s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
 		return
 	}
