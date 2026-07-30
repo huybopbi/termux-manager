@@ -26,7 +26,7 @@
 
 /* ── Reset ────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; height: 100dvh; overflow: hidden; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -43,7 +43,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .hidden { display: none !important; }
 
 /* ── Layout ───────────────────────────────────────────── */
-#app { display: flex; flex-direction: column; height: 100vh; }
+#app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
 
 /* ── Header ───────────────────────────────────────────── */
 #header {
@@ -987,6 +987,12 @@ table.db-table .db-actions-col { width: 36px; padding: 4px; }
 @media (max-width: 720px) {
   :root { --header-h: 52px; }
 
+  /* svh = visible height WITH browser chrome shown, so list isn't
+     trapped under Chrome's bottom nav (100vh alone isn't enough). */
+  html, body, #app {
+    height: 100svh;
+  }
+
   #header {
     padding: 0 10px;
     gap: 4px;
@@ -1030,7 +1036,8 @@ table.db-table .db-actions-col { width: 36px; padding: 4px; }
   #btn-term-popout { display: none; }
 
   #file-list {
-    padding: 8px 6px 16px;
+    /* Extra space so last rows clear FAB */
+    padding: 8px 6px calc(120px + env(safe-area-inset-bottom, 0px));
   }
   .file-row {
     padding: 9px 8px;
@@ -1039,11 +1046,11 @@ table.db-table .db-actions-col { width: 36px; padding: 4px; }
   .file-row:hover { transform: none; }
   .file-badge { width: 38px; height: 38px; }
   #fab-group {
-    bottom: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     right: 14px;
   }
   #toast-container {
-    bottom: 72px;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
   #db-connect {
