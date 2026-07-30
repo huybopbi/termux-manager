@@ -61,7 +61,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
 - **Image preview** (png/jpg/webp/…)
-- Hidden files toggle
+- Hidden files toggle in **Settings** (also `-hidden` / config)
 - **Settings**: listen address (localhost / all interfaces) and port; saved to `~/.config/termux-manager/config.json`
 
 ### Editor ([Ace](https://ace.c9.io/))

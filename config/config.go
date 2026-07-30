@@ -8,12 +8,13 @@ import (
 
 // Config is persisted user preferences for the manager process.
 type Config struct {
-	Listen string `json:"listen"`
-	Port   int    `json:"port"`
+	Listen     string `json:"listen"`
+	Port       int    `json:"port"`
+	ShowHidden bool   `json:"show_hidden"`
 }
 
 func Defaults() Config {
-	return Config{Listen: "127.0.0.1", Port: 9876}
+	return Config{Listen: "127.0.0.1", Port: 9876, ShowHidden: false}
 }
 
 // Path returns ~/.config/termux-manager/config.json

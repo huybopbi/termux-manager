@@ -169,7 +169,7 @@ func main() {
 	listen := flag.String("listen", cfg.Listen, "Listen address (127.0.0.1 or 0.0.0.0 for LAN/ngrok)")
 	port := flag.Int("port", cfg.Port, "Port to listen on")
 	root := flag.String("root", "", "Root directory (default: $HOME)")
-	hidden := flag.Bool("hidden", false, "Show hidden files")
+	hidden := flag.Bool("hidden", cfg.ShowHidden, "Show hidden files")
 	noOpen := flag.Bool("no-open", false, "Don't open browser automatically")
 	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()

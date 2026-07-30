@@ -105,7 +105,10 @@ func (s *Server) fail(w http.ResponseWriter, status int, err error) {
 // GET /api/list?path=foo/bar
 func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
-	result, err := fsops.List(s.rootPath(), path, s.ShowHidden)
+	s.mu.RLock()
+	showHidden := s.ShowHidden
+	s.mu.RUnlock()
+	result, err := fsops.List(s.rootPath(), path, showHidden)
 	if err != nil {
 		s.fail(w, http.StatusBadRequest, err)
 		return
@@ -252,7 +255,10 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusBadRequest, fmt.Errorf("query is empty"))
 		return
 	}
-	results, err := fsops.Search(s.rootPath(), path, query, s.ShowHidden)
+	s.mu.RLock()
+	showHidden := s.ShowHidden
+	s.mu.RUnlock()
+	results, err := fsops.Search(s.rootPath(), path, query, showHidden)
 	if err != nil {
 		s.fail(w, http.StatusInternalServerError, err)
 		return

@@ -496,6 +496,20 @@ input:focus, textarea:focus { border-color: var(--accent); }
   color: var(--text2);
   font-weight: 500;
 }
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
 #settings-listen,
 #settings-port {
   width: 100%;

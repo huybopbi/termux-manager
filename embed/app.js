@@ -554,6 +554,7 @@ async function openSettings() {
   }
   sel.value = d.listen || '127.0.0.1';
   $('#settings-port').value = d.port || 9876;
+  $('#settings-hidden').checked = !!d.show_hidden;
   $('#settings-meta').textContent = d.config_path
     ? 'Saved to ' + d.config_path
     : '';
@@ -567,18 +568,21 @@ function closeSettings() {
 async function saveSettings() {
   const listen = $('#settings-listen').value;
   const port = parseInt($('#settings-port').value, 10);
+  const show_hidden = $('#settings-hidden').checked;
   if (!port || port < 1 || port > 65535) {
     toast('Invalid port', 'error');
     return;
   }
-  const res = await api.saveSettings({ listen, port });
+  const res = await api.saveSettings({ listen, port, show_hidden });
   if (!res.ok) { toast(res.error || 'Save failed', 'error'); return; }
+  state.showHidden = !!show_hidden;
   closeSettings();
   if (res.data && res.data.relisten) {
     toast('Saved — rebinding server…', 'success');
   } else {
     toast('Settings saved', 'success');
   }
+  navigate(state.path);
 }
 
 /* ── Quick paths ──────────────────────────────────────── */
@@ -1496,12 +1500,6 @@ async function init() {
     navigate(state.path);
   };
   $('#search-input').oninput = (e) => doSearch(e.target.value.trim());
-
-  $('#btn-hidden').onclick = () => {
-    state.showHidden = !state.showHidden;
-    $('#btn-hidden').classList.toggle('active', state.showHidden);
-    navigate(state.path);
-  };
 
   $('#upload-input').onchange = (e) => {
     if (e.target.files.length) uploadFiles([...e.target.files]);

@@ -28,13 +28,14 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 // GET /api/settings
 func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
-	listen, port := s.Listen, s.Port
+	listen, port, showHidden := s.Listen, s.Port, s.ShowHidden
 	s.mu.RUnlock()
 	cfgPath, _ := config.Path()
 	s.ok(w, map[string]interface{}{
-		"listen":      listen,
-		"port":        port,
-		"config_path": cfgPath,
+		"listen":       listen,
+		"port":         port,
+		"show_hidden":  showHidden,
+		"config_path":  cfgPath,
 		"presets": []map[string]string{
 			{"value": "127.0.0.1", "label": "Localhost only (safe)"},
 			{"value": "0.0.0.0", "label": "All interfaces (LAN / ngrok)"},
@@ -42,11 +43,12 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// PUT /api/settings  body: {"listen":"0.0.0.0","port":9876}
+// PUT /api/settings  body: {"listen":"0.0.0.0","port":9876,"show_hidden":true}
 func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Listen string `json:"listen"`
-		Port   int    `json:"port"`
+		Listen     string `json:"listen"`
+		Port       int    `json:"port"`
+		ShowHidden *bool  `json:"show_hidden"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.fail(w, http.StatusBadRequest, err)
@@ -64,10 +66,13 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.RLock()
-	oldListen, oldPort := s.Listen, s.Port
+	oldListen, oldPort, showHidden := s.Listen, s.Port, s.ShowHidden
 	s.mu.RUnlock()
+	if req.ShowHidden != nil {
+		showHidden = *req.ShowHidden
+	}
 
-	cfg := config.Config{Listen: listen, Port: req.Port}
+	cfg := config.Config{Listen: listen, Port: req.Port, ShowHidden: showHidden}
 	if err := config.Save(cfg); err != nil {
 		s.fail(w, http.StatusInternalServerError, err)
 		return
@@ -76,14 +81,16 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.Listen = listen
 	s.Port = req.Port
+	s.ShowHidden = showHidden
 	s.mu.Unlock()
 
 	changed := listen != oldListen || req.Port != oldPort
 	resp := map[string]interface{}{
-		"listen":      listen,
-		"port":        req.Port,
-		"saved":       true,
-		"relisten":    false,
+		"listen":       listen,
+		"port":         req.Port,
+		"show_hidden":  showHidden,
+		"saved":        true,
+		"relisten":     false,
 		"needs_rebind": changed,
 	}
 
