@@ -5,9 +5,37 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
+    name: Build & Release
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: android
+            goarch: arm64
+            asset: manager-android-arm64
+          - goos: android
+            goarch: arm
+            goarm: "7"
+            asset: manager-android-arm
+          - goos: linux
+            goarch: amd64
+            asset: manager-linux-amd64
+          - goos: linux
+            goarch: arm64
+            asset: manager-linux-arm64
+          - goos: windows
+            goarch: amd64
+            asset: manager-windows-amd64.exe
+          - goos: darwin
+            goarch: arm64
+            asset: manager-darwin-arm64
+
     steps:
       - uses: actions/checkout@v4
 
@@ -15,29 +43,15 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Build all Android targets
-        run: |
-          mkdir -p dist
-          VERSION=${GITHUB_REF_NAME}
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+        run: go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o ${{ matrix.asset }} .
 
-          GOOS=android GOARCH=arm64 CGO_ENABLED=0 \
-            go build -ldflags "-s -w -X main.version=$VERSION" \
-            -o dist/manager-android-arm64 .
-
-          GOOS=android GOARCH=arm GOARM=7 CGO_ENABLED=0 \
-            go build -ldflags "-s -w -X main.version=$VERSION" \
-            -o dist/manager-android-arm .
-
-          GOOS=android GOARCH=amd64 CGO_ENABLED=0 \
-            go build -ldflags "-s -w -X main.version=$VERSION" \
-            -o dist/manager-android-amd64 .
-
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-            go build -ldflags "-s -w -X main.version=$VERSION" \
-            -o dist/manager-linux-amd64 .
-
-      - name: Create release
+      - name: Upload asset
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
-          generate_release_notes: true
+          files: ${{ matrix.asset }}
