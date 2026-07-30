@@ -274,6 +274,21 @@
   <!-- Upload input (hidden) -->
   <input type="file" id="upload-input" multiple style="display:none" />
 
+  <!-- Upload progress -->
+  <div id="upload-progress" class="hidden" aria-live="polite">
+    <div id="upload-progress-card">
+      <div id="upload-progress-top">
+        <span id="upload-progress-title">Uploading…</span>
+        <button type="button" id="upload-progress-cancel" class="icon-btn" title="Cancel">✕</button>
+      </div>
+      <div id="upload-progress-file"></div>
+      <div id="upload-progress-bar-wrap">
+        <div id="upload-progress-bar"></div>
+      </div>
+      <div id="upload-progress-meta"></div>
+    </div>
+  </div>
+
   <!-- Terminal panel -->
   <div id="term-panel" class="hidden">
     <div id="term-header">

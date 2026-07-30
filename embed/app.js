@@ -1160,20 +1160,129 @@ async function openEditor(file) {
 
 
 /* ── Upload ───────────────────────────────────────────── */
-async function uploadFiles(files) {
-  for (const file of files) {
+let uploadBusy = false;
+let uploadCancel = null;
+
+function showUploadProgress() {
+  $('#upload-progress').classList.remove('hidden');
+}
+
+function hideUploadProgress() {
+  $('#upload-progress').classList.add('hidden');
+  $('#upload-progress-bar').style.width = '0%';
+  $('#upload-progress-file').textContent = '';
+  $('#upload-progress-meta').textContent = '';
+  $('#upload-progress-title').textContent = 'Uploading…';
+}
+
+function setUploadProgress({ title, file, pct, meta }) {
+  if (title) $('#upload-progress-title').textContent = title;
+  if (file !== undefined) $('#upload-progress-file').textContent = file;
+  if (pct !== undefined) {
+    const p = Math.max(0, Math.min(100, pct));
+    $('#upload-progress-bar').style.width = p.toFixed(1) + '%';
+  }
+  if (meta !== undefined) $('#upload-progress-meta').textContent = meta;
+}
+
+function uploadOneFile(file, dirPath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    uploadCancel = () => xhr.abort();
+    xhr.open('POST', `/api/upload?path=${enc(dirPath)}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
+      else onProgress(0, file.size || 0);
+    };
+    xhr.onload = () => {
+      let res = null;
+      try { res = JSON.parse(xhr.responseText); } catch (_) {}
+      if (xhr.status >= 200 && xhr.status < 300 && res && res.ok) {
+        resolve(res);
+      } else {
+        reject(new Error((res && res.error) || `HTTP ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.onabort = () => reject(Object.assign(new Error('cancelled'), { cancelled: true }));
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(`/api/upload?path=${enc(state.path)}`, {
-      method: 'POST', body: fd,
-    }).then(r => r.json());
-    if (res.ok) {
-      toast(`Uploaded ${file.name}`, 'success');
-    } else {
-      toast(`Upload failed: ${res.error}`, 'error');
-    }
+    xhr.send(fd);
+  });
+}
+
+async function uploadFiles(files) {
+  if (!files || !files.length) return;
+  if (uploadBusy) {
+    toast('Upload already in progress', 'error');
+    return;
   }
-  navigate(state.path);
+  uploadBusy = true;
+  const list = [...files];
+  const totalBytes = list.reduce((s, f) => s + (f.size || 0), 0) || 1;
+  let doneBytes = 0;
+  let okCount = 0;
+  let failCount = 0;
+  let cancelled = false;
+  const destPath = state.path;
+
+  showUploadProgress();
+  setUploadProgress({
+    title: `Uploading 0/${list.length}`,
+    file: list[0].name,
+    pct: 0,
+    meta: `0 / ${formatSize(totalBytes)}`,
+  });
+
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i];
+      const fileSize = file.size || 0;
+      setUploadProgress({
+        title: `Uploading ${i + 1}/${list.length}`,
+        file: file.name,
+      });
+      try {
+        await uploadOneFile(file, destPath, (loaded, total) => {
+          const cur = total > 0 ? loaded : loaded;
+          const overall = doneBytes + cur;
+          const pct = (overall / totalBytes) * 100;
+          setUploadProgress({
+            pct,
+            meta: `${formatSize(Math.min(overall, totalBytes))} / ${formatSize(totalBytes)}`,
+          });
+        });
+        doneBytes += fileSize;
+        okCount++;
+        setUploadProgress({
+          pct: (doneBytes / totalBytes) * 100,
+          meta: `${formatSize(doneBytes)} / ${formatSize(totalBytes)}`,
+        });
+      } catch (err) {
+        if (err && err.cancelled) {
+          cancelled = true;
+          break;
+        }
+        failCount++;
+        doneBytes += fileSize;
+        toast(`Upload failed: ${file.name}`, 'error');
+      }
+    }
+  } finally {
+    uploadCancel = null;
+    uploadBusy = false;
+    hideUploadProgress();
+    if (cancelled) {
+      toast(`Upload cancelled (${okCount} done)`, okCount ? 'success' : 'error');
+    } else if (failCount === 0) {
+      toast(okCount === 1 ? 'Uploaded 1 file' : `Uploaded ${okCount} files`, 'success');
+    } else if (okCount > 0) {
+      toast(`Uploaded ${okCount}, failed ${failCount}`, 'error');
+    }
+    navigate(state.path);
+    const input = $('#upload-input');
+    if (input) input.value = '';
+  }
 }
 
 /* ── Actions ──────────────────────────────────────────── */
@@ -1336,6 +1445,9 @@ async function init() {
   $('#upload-input').onchange = (e) => {
     if (e.target.files.length) uploadFiles([...e.target.files]);
     e.target.value = '';
+  };
+  $('#upload-progress-cancel').onclick = () => {
+    if (typeof uploadCancel === 'function') uploadCancel();
   };
 
   // FAB
