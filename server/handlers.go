@@ -295,8 +295,8 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /api/upload?path=dir   multipart/form-data
-//   file: the file contents
 //   relpath (optional): relative path under path (e.g. "mydir/a.txt") for folder uploads
+//   file: the file contents (streamed to disk — no large in-memory buffer)
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	dirRel := r.URL.Query().Get("path")
 	root := s.rootPath()
@@ -306,57 +306,121 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(512 << 20); err != nil { // 512 MB max
-		s.fail(w, http.StatusBadRequest, err)
-		return
-	}
-	file, header, err := r.FormFile("file")
+	mr, err := r.MultipartReader()
 	if err != nil {
 		s.fail(w, http.StatusBadRequest, err)
 		return
 	}
-	defer file.Close()
 
-	rel := strings.TrimSpace(r.FormValue("relpath"))
-	if rel == "" {
-		rel = filepath.Base(header.Filename)
-	}
-	rel = filepath.ToSlash(rel)
-	rel = path.Clean("/" + rel)
-	rel = strings.TrimPrefix(rel, "/")
-	if rel == "" || rel == "." || strings.Contains(rel, "..") {
-		s.fail(w, http.StatusBadRequest, fmt.Errorf("invalid relative path"))
-		return
+	var (
+		relHint  string
+		savedRel string
+		savedName string
+		gotFile  bool
+	)
+
+	// Small buffer for streaming; avoids holding the whole upload in RAM.
+	buf := make([]byte, 32<<10) // 32 KiB
+
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			s.fail(w, http.StatusBadRequest, err)
+			return
+		}
+
+		switch part.FormName() {
+		case "relpath":
+			b, err := io.ReadAll(io.LimitReader(part, 8<<10))
+			part.Close()
+			if err != nil {
+				s.fail(w, http.StatusBadRequest, err)
+				return
+			}
+			relHint = strings.TrimSpace(string(b))
+
+		case "file":
+			if gotFile {
+				part.Close()
+				s.fail(w, http.StatusBadRequest, fmt.Errorf("only one file part allowed"))
+				return
+			}
+			filename := part.FileName()
+			rel := relHint
+			if rel == "" {
+				rel = filepath.Base(filename)
+			}
+			rel = filepath.ToSlash(rel)
+			rel = path.Clean("/" + rel)
+			rel = strings.TrimPrefix(rel, "/")
+			if rel == "" || rel == "." || strings.Contains(rel, "..") {
+				part.Close()
+				s.fail(w, http.StatusBadRequest, fmt.Errorf("invalid relative path"))
+				return
+			}
+
+			dest := filepath.Join(dirAbs, filepath.FromSlash(rel))
+			dirAbsClean := filepath.Clean(dirAbs)
+			destClean := filepath.Clean(dest)
+			sep := string(os.PathSeparator)
+			if destClean != dirAbsClean && !strings.HasPrefix(destClean, dirAbsClean+sep) {
+				part.Close()
+				s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
+				return
+			}
+			rootClean := filepath.Clean(root)
+			if !strings.HasPrefix(destClean, rootClean+sep) && destClean != rootClean {
+				part.Close()
+				s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
+				return
+			}
+
+			if err := os.MkdirAll(filepath.Dir(destClean), 0o755); err != nil {
+				part.Close()
+				s.fail(w, http.StatusInternalServerError, err)
+				return
+			}
+			out, err := os.Create(destClean)
+			if err != nil {
+				part.Close()
+				s.fail(w, http.StatusInternalServerError, err)
+				return
+			}
+			_, copyErr := io.CopyBuffer(out, part, buf)
+			closeErr := out.Close()
+			part.Close()
+			if copyErr != nil {
+				os.Remove(destClean)
+				s.fail(w, http.StatusInternalServerError, copyErr)
+				return
+			}
+			if closeErr != nil {
+				os.Remove(destClean)
+				s.fail(w, http.StatusInternalServerError, closeErr)
+				return
+			}
+			gotFile = true
+			savedRel = rel
+			if filename != "" {
+				savedName = filepath.Base(filename)
+			} else {
+				savedName = filepath.Base(rel)
+			}
+
+		default:
+			_, _ = io.Copy(io.Discard, part)
+			part.Close()
+		}
 	}
 
-	dest := filepath.Join(dirAbs, filepath.FromSlash(rel))
-	dirAbsClean := filepath.Clean(dirAbs)
-	destClean := filepath.Clean(dest)
-	sep := string(os.PathSeparator)
-	if destClean != dirAbsClean && !strings.HasPrefix(destClean, dirAbsClean+sep) {
-		s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
+	if !gotFile {
+		s.fail(w, http.StatusBadRequest, fmt.Errorf("missing file part"))
 		return
 	}
-	if !strings.HasPrefix(destClean, filepath.Clean(root)+sep) && destClean != filepath.Clean(root) {
-		s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
-		return
-	}
-
-	if err := os.MkdirAll(filepath.Dir(destClean), 0o755); err != nil {
-		s.fail(w, http.StatusInternalServerError, err)
-		return
-	}
-	out, err := os.Create(destClean)
-	if err != nil {
-		s.fail(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, file); err != nil {
-		s.fail(w, http.StatusInternalServerError, err)
-		return
-	}
-	s.ok(w, map[string]string{"name": header.Filename, "path": rel})
+	s.ok(w, map[string]string{"name": savedName, "path": savedRel})
 }
 
 // POST /api/zip  body: {"path":"dir","files":["a","b"],"name":"archive.zip"}

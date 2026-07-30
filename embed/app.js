@@ -1211,9 +1211,10 @@ function uploadOneFile(file, dirPath, onProgress) {
     xhr.onerror = () => reject(new Error('Network error'));
     xhr.onabort = () => reject(Object.assign(new Error('cancelled'), { cancelled: true }));
     const fd = new FormData();
-    fd.append('file', file);
+    // relpath before file so the server can stream without buffering the whole body
     const rel = (file.relativePath || file.webkitRelativePath || file.name || '').replace(/^\/+/, '');
     if (rel) fd.append('relpath', rel);
+    fd.append('file', file);
     xhr.send(fd);
   });
 }

@@ -57,6 +57,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - Browse with breadcrumb, parent `..`, Esc → up
 - Create folder/file (FAB), rename, delete, copy/cut/paste selection
 - Upload files or folders via FAB **+** (or drag-and-drop) with progress bar, download
+  (server streams to disk — low RAM use for multi‑GB files)
 - Search under current directory
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
@@ -193,6 +194,7 @@ Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `
 - [x] Settings UI + `-listen` / config for LAN & tunnel bind (`0.0.0.0`)
 - [x] Upload progress bar (multi-file / large files, cancel)
 - [x] Upload folders (webkitdirectory + drag-drop, preserves relative paths)
+- [x] Streamed upload (MultipartReader) — large files without buffering into RAM
 
 ### Planned
 - [ ] Basic auth (`-auth`)
