@@ -62,6 +62,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
 - **Image preview** (png/jpg/webp/…)
+- **Video play** via Plyr (CDN, lazy-loaded): mp4/webm/mov… ; mkv/avi may need download
 - Hidden files toggle in **Settings** (also `-hidden` / config)
 - **Settings**: listen address (localhost / all interfaces) and port; saved to `~/.config/termux-manager/config.json`
 
@@ -195,6 +196,7 @@ Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `
 - [x] Upload progress bar (multi-file / large files, cancel)
 - [x] Upload folders (webkitdirectory + drag-drop, preserves relative paths)
 - [x] Streamed upload (MultipartReader) — large files without buffering into RAM
+- [x] Video playback with Plyr CDN (lazy-loaded)
 
 ### Planned
 - [ ] Basic auth (`-auth`)

@@ -216,6 +216,24 @@ function isImage(file) {
   return ['png','jpg','jpeg','gif','webp','bmp','svg','ico','heic','avif'].includes(ext);
 }
 
+function isVideo(file) {
+  if (!file || file.is_dir) return false;
+  const ext = (file.ext || '').toLowerCase();
+  return ['mp4','webm','ogg','ogv','m4v','mov','mkv','avi'].includes(ext);
+}
+
+function videoMime(ext) {
+  const map = {
+    mp4: 'video/mp4', m4v: 'video/mp4',
+    webm: 'video/webm',
+    ogg: 'video/ogg', ogv: 'video/ogg',
+    mov: 'video/quicktime',
+    mkv: 'video/x-matroska',
+    avi: 'video/x-msvideo',
+  };
+  return map[(ext || '').toLowerCase()] || 'video/mp4';
+}
+
 function isZipArchive(file) {
   if (!file || file.is_dir) return false;
   return (file.ext || '').toLowerCase() === 'zip';
@@ -529,6 +547,10 @@ function openFile(file) {
     openPreview(file);
     return;
   }
+  if (isVideo(file)) {
+    openVideo(file);
+    return;
+  }
   if (isArchive(file)) {
     doExtract(file);
     return;
@@ -634,23 +656,114 @@ async function switchRoot(path) {
   navigate('');
 }
 
-/* ── Image preview ────────────────────────────────────── */
+/* ── Media preview (image / Plyr video) ───────────────── */
+let plyrPlayer = null;
+let plyrLoadPromise = null;
+
+function loadPlyr() {
+  if (window.Plyr) return Promise.resolve();
+  if (plyrLoadPromise) return plyrLoadPromise;
+  plyrLoadPromise = new Promise((resolve, reject) => {
+    const cssId = 'plyr-cdn-css';
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link');
+      link.id = cssId;
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css';
+      document.head.appendChild(link);
+    }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => {
+      plyrLoadPromise = null;
+      reject(new Error('Failed to load Plyr'));
+    };
+    document.head.appendChild(s);
+  });
+  return plyrLoadPromise;
+}
+
+function destroyPlyr() {
+  if (plyrPlayer) {
+    try { plyrPlayer.destroy(); } catch (_) {}
+    plyrPlayer = null;
+  }
+  const video = $('#preview-video');
+  if (video) {
+    try { video.pause(); } catch (_) {}
+    video.removeAttribute('src');
+    video.innerHTML = '';
+    try { video.load(); } catch (_) {}
+  }
+}
+
 function openPreview(file) {
+  destroyPlyr();
   state.previewPath = file.path;
   $('#preview-filename').textContent = file.name;
-  const url = `/api/download?path=${enc(file.path)}&inline=1`;
+  $('#preview-video-wrap').classList.add('hidden');
   const img = $('#preview-img');
+  img.classList.remove('hidden');
   img.onload = () => {};
   img.onerror = () => toast('Failed to load image', 'error');
-  img.src = url;
+  img.src = `/api/download?path=${enc(file.path)}&inline=1`;
   $('#preview-download').href = `/api/download?path=${enc(file.path)}`;
   $('#preview-download').setAttribute('download', file.name);
   $('#preview-overlay').classList.remove('hidden');
 }
 
-function closePreview() {
-  $('#preview-overlay').classList.add('hidden');
+async function openVideo(file) {
+  destroyPlyr();
+  state.previewPath = file.path;
+  $('#preview-filename').textContent = file.name;
+  $('#preview-img').classList.add('hidden');
   $('#preview-img').removeAttribute('src');
+  $('#preview-video-wrap').classList.remove('hidden');
+  $('#preview-download').href = `/api/download?path=${enc(file.path)}`;
+  $('#preview-download').setAttribute('download', file.name);
+  $('#preview-overlay').classList.remove('hidden');
+
+  const ext = (file.ext || '').toLowerCase();
+  if (ext === 'mkv' || ext === 'avi') {
+    toast('Browser may not play this format — try Download', 'error');
+  }
+
+  try {
+    await loadPlyr();
+  } catch (_) {
+    toast('Plyr CDN unavailable — using native controls', 'error');
+  }
+
+  const video = $('#preview-video');
+  const source = document.createElement('source');
+  source.src = `/api/download?path=${enc(file.path)}&inline=1`;
+  source.type = videoMime(ext);
+  video.appendChild(source);
+  video.load();
+
+  if (window.Plyr) {
+    plyrPlayer = new Plyr(video, {
+      controls: [
+        'play-large', 'play', 'progress', 'current-time', 'duration',
+        'mute', 'volume', 'settings', 'fullscreen',
+      ],
+      settings: ['quality', 'speed'],
+      ratio: null,
+      keyboard: { focused: true, global: false },
+    });
+    plyrPlayer.on('error', () => toast('Cannot play this video in browser', 'error'));
+  } else {
+    video.addEventListener('error', () => toast('Cannot play this video in browser', 'error'), { once: true });
+  }
+}
+
+function closePreview() {
+  destroyPlyr();
+  $('#preview-overlay').classList.add('hidden');
+  $('#preview-img').classList.remove('hidden');
+  $('#preview-img').removeAttribute('src');
+  $('#preview-video-wrap').classList.add('hidden');
   state.previewPath = '';
 }
 
@@ -753,7 +866,17 @@ function showCtxMenu(e, file) {
 
   // Hide items not applicable
   menu.querySelector('[data-ctx="edit"]').style.display = isEditable(file) ? '' : 'none';
-  menu.querySelector('[data-ctx="preview"]').style.display = isImage(file) ? '' : 'none';
+  const prevBtn = menu.querySelector('[data-ctx="preview"]');
+  if (isVideo(file)) {
+    prevBtn.style.display = '';
+    prevBtn.textContent = 'Play';
+  } else if (isImage(file)) {
+    prevBtn.style.display = '';
+    prevBtn.textContent = 'Preview';
+  } else {
+    prevBtn.style.display = 'none';
+    prevBtn.textContent = 'Preview';
+  }
   menu.querySelector('[data-ctx="extract"]').style.display = isArchive(file) ? '' : 'none';
   menu.querySelector('[data-ctx="open-db"]').style.display = isDBFile(file) ? '' : 'none';
   menu.querySelector('[data-ctx="open"]').style.display = file.is_dir ? 'none' : '';
@@ -1570,7 +1693,8 @@ async function init() {
           openFile(file);
           break;
         case 'preview':
-          openPreview(file);
+          if (isVideo(file)) openVideo(file);
+          else openPreview(file);
           break;
         case 'edit':
           openEditor(file);

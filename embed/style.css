@@ -544,7 +544,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
 }
 #settings-save:hover { filter: brightness(1.05); }
 
-/* ── Image preview ────────────────────────────────────── */
+/* ── Media preview ────────────────────────────────────── */
 #preview-overlay {
   position: fixed; inset: 0;
   background: #0a0a0a;
@@ -593,6 +593,19 @@ input:focus, textarea:focus { border-color: var(--accent); }
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+}
+#preview-video-wrap {
+  width: min(960px, 100%);
+  max-height: 100%;
+}
+#preview-video-wrap .plyr,
+#preview-video {
+  width: 100%;
+  max-height: calc(100svh - 64px);
+}
+#preview-overlay .plyr--video {
+  --plyr-color-main: var(--accent);
+  background: #000;
 }
 
 /* ── Modal ────────────────────────────────────────────── */
