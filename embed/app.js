@@ -685,6 +685,8 @@ async function switchRoot(path) {
 let plyrPlayer = null;
 let plyrLoadPromise = null;
 let markedLoadPromise = null;
+let pdfjsLoadPromise = null;
+let pdfRenderToken = 0;
 let previewEditFile = null;
 
 function loadPlyr() {
@@ -727,6 +729,31 @@ function loadMarked() {
   return markedLoadPromise;
 }
 
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  if (pdfjsLoadPromise) return pdfjsLoadPromise;
+  pdfjsLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    s.onload = () => {
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        resolve();
+      } catch (err) {
+        pdfjsLoadPromise = null;
+        reject(err);
+      }
+    };
+    s.onerror = () => {
+      pdfjsLoadPromise = null;
+      reject(new Error('Failed to load PDF.js'));
+    };
+    document.head.appendChild(s);
+  });
+  return pdfjsLoadPromise;
+}
+
 function sanitizeMarkdownHtml(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   doc.querySelectorAll('script,iframe,object,embed,link,meta,form').forEach(el => el.remove());
@@ -763,13 +790,14 @@ function destroyPlyr() {
 
 function resetPreviewPanes() {
   destroyPlyr();
+  pdfRenderToken++;
   const img = $('#preview-img');
   img.classList.add('hidden');
   img.removeAttribute('src');
   $('#preview-video-wrap').classList.add('hidden');
-  const pdf = $('#preview-pdf');
+  const pdf = $('#preview-pdf-wrap');
   pdf.classList.add('hidden');
-  pdf.removeAttribute('src');
+  pdf.innerHTML = '';
   const md = $('#preview-md');
   md.classList.add('hidden');
   md.innerHTML = '';
@@ -841,14 +869,56 @@ async function openVideo(file) {
   }
 }
 
-function openPDF(file) {
+async function openPDF(file) {
   resetPreviewPanes();
   preparePreviewChrome(file);
-  const pdf = $('#preview-pdf');
-  pdf.classList.remove('hidden');
-  pdf.onload = () => {};
-  pdf.onerror = () => toast('Failed to load PDF', 'error');
-  pdf.src = `/api/download?path=${enc(file.path)}&inline=1`;
+  const wrap = $('#preview-pdf-wrap');
+  wrap.classList.remove('hidden');
+  wrap.innerHTML = '<p class="pdf-status">Loading PDF…</p>';
+
+  const token = pdfRenderToken;
+
+  try {
+    await loadPdfJs();
+  } catch (_) {
+    wrap.innerHTML = '<p class="pdf-status">PDF.js CDN unavailable — use Download</p>';
+    toast('PDF.js CDN unavailable', 'error');
+    return;
+  }
+  if (token !== pdfRenderToken) return;
+
+  try {
+    const url = `/api/download?path=${enc(file.path)}&inline=1`;
+    const loading = window.pdfjsLib.getDocument({ url, withCredentials: false });
+    const pdf = await loading.promise;
+    if (token !== pdfRenderToken) return;
+
+    wrap.innerHTML = '';
+    const maxW = Math.max(280, wrap.clientWidth - 24);
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      if (token !== pdfRenderToken) return;
+      const page = await pdf.getPage(i);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(1.5, maxW / base.width);
+      const viewport = page.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = Math.floor(base.width * scale) + 'px';
+      canvas.style.height = Math.floor(base.height * scale) + 'px';
+      wrap.appendChild(canvas);
+      await page.render({
+        canvasContext: canvas.getContext('2d'),
+        viewport,
+      }).promise;
+    }
+  } catch (err) {
+    if (token !== pdfRenderToken) return;
+    console.error(err);
+    wrap.innerHTML = '<p class="pdf-status">Failed to render PDF — try Download</p>';
+    toast('Failed to render PDF', 'error');
+  }
 }
 
 async function openMarkdown(file) {

@@ -280,8 +280,11 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	ext := filepath.Ext(abs)
+	ext := strings.ToLower(filepath.Ext(abs))
 	mimeType := mime.TypeByExtension(ext)
+	if ext == ".pdf" {
+		mimeType = "application/pdf"
+	}
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
@@ -291,6 +294,8 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`%s; filename="%s"`, disp, info.Name()))
 	w.Header().Set("Content-Type", mimeType)
+	// Avoid MIME sniffing flipping PDF to octet-stream on some clients.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	http.ServeFile(w, r, abs)
 }
 

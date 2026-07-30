@@ -62,7 +62,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
 - **Image preview** (png/jpg/webp/…)
-- **PDF preview** (inline browser viewer)
+- **PDF preview** (PDF.js CDN canvas render — works on Android browsers)
 - **Markdown preview** (`.md` / `.markdown`; Edit opens Ace)
 - **Video play** via Plyr (CDN, lazy-loaded): mp4/webm/mov… ; mkv/avi may need download
 - Hidden files toggle in **Settings** (also `-hidden` / config)
@@ -203,7 +203,7 @@ Same-origin UI only: the server rejects requests whose `Origin` does not match `
 - [x] Streamed upload (MultipartReader) — large files without buffering into RAM
 - [x] Video playback with Plyr CDN (lazy-loaded)
 - [x] Path containment hardening (`Within` / zip-slip via `filepath.Rel`) + Origin/Host guard (no `ACAO:*`)
-- [x] PDF preview + Markdown rendered preview (marked CDN, lazy-loaded)
+- [x] PDF preview via PDF.js (CDN) + Markdown rendered preview (marked CDN)
 - [x] Edit cert/key text files (`.pem` / `.key` / `.crt` / `.cer`)
 
 ### Planned

@@ -298,6 +298,20 @@ const Term = (() => {
     });
   }
 
+  // Keep file-list offset in sync with the actual terminal panel height.
+  function syncMainOffset() {
+    if (standalone() || !panelOpen) return;
+    const p = panel();
+    if (!p) return;
+    const panelH = p.offsetHeight;
+    if (panelH <= 0) return;
+    app().style.setProperty('--term-h', panelH + 'px');
+    const h = handle();
+    if (h && !h.classList.contains('hidden') && !p.style.bottom) {
+      h.style.bottom = panelH + 'px';
+    }
+  }
+
   /* ── Open / close panel ───────────────────────────── */
   function openPanel() {
     if (panelOpen) { switchToPanel(); return; }
@@ -309,6 +323,7 @@ const Term = (() => {
       app().classList.add('term-open');
       const btn = document.getElementById('btn-terminal');
       if (btn) btn.classList.add('active');
+      syncMainOffset();
     } else {
       expanded = true;
       panel().classList.add('expanded', 'standalone');
@@ -318,6 +333,7 @@ const Term = (() => {
       restoreSessions().then(() => {
         requestAnimationFrame(() => {
           adaptToVisualViewport();
+          syncMainOffset();
           fitAll();
         });
       });
@@ -325,6 +341,7 @@ const Term = (() => {
       switchTab(activeId || tabs[0].id);
       requestAnimationFrame(() => {
         adaptToVisualViewport();
+        syncMainOffset();
         fitAll();
       });
     }
@@ -373,9 +390,10 @@ const Term = (() => {
     expanded = !expanded;
     panel().classList.toggle('expanded', expanded);
     app().classList.toggle('term-expanded', expanded);
-    const h = handle();
-    if (h) h.style.bottom = expanded ? '90vh' : '45vh';
-    requestAnimationFrame(fitAll);
+    requestAnimationFrame(() => {
+      syncMainOffset();
+      fitAll();
+    });
   }
 
   function openPopout() {
@@ -601,8 +619,9 @@ const Term = (() => {
     if (!p) return;
     if (standalone()) return;
     p.style.bottom = '';
+    app().style.removeProperty('--term-h');
     const h = handle();
-    if (h) h.style.bottom = expanded ? '90vh' : '45vh';
+    if (h) h.style.bottom = '';
   }
 
   /* ── Window / visual viewport resize ──────────────── */

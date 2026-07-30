@@ -226,10 +226,10 @@ body.term-only #btn-term-files {
 
 /* ── Push main content up when terminal is open ───────── */
 #app.term-open #main {
-  margin-bottom: 45vh;
+  margin-bottom: var(--term-h, 45vh);
 }
 #app.term-open.term-expanded #main {
-  margin-bottom: 90vh;
+  margin-bottom: var(--term-h, 90vh);
 }
 
 /* ── Connecting overlay ───────────────────────────────── */
