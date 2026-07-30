@@ -292,6 +292,91 @@ func TarGz(root, relDir string, names []string, outName string) error {
 	return nil
 }
 
+// Untar extracts a .tar, .tar.gz, or .tgz archive into destRel.
+func Untar(root, relPath, destRel string) error {
+	src := safeJoin(root, relPath)
+	dst := safeJoin(root, destRel)
+	if src == "" || dst == "" {
+		return os.ErrInvalid
+	}
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var r io.Reader = f
+	lower := strings.ToLower(src)
+	if strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz") {
+		gz, err := gzip.NewReader(f)
+		if err != nil {
+			return err
+		}
+		defer gz.Close()
+		r = gz
+	}
+
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		name := filepath.Clean(filepath.FromSlash(hdr.Name))
+		if name == "." || name == "" {
+			continue
+		}
+		if name == ".." || strings.HasPrefix(name, ".."+string(os.PathSeparator)) {
+			continue
+		}
+		target := filepath.Join(dst, name)
+		if rel, err := filepath.Rel(dst, target); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+			continue // tar slip guard
+		}
+
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg, tar.TypeRegA:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			mode := os.FileMode(hdr.Mode) & 0777
+			if mode == 0 {
+				mode = 0644
+			}
+			out, err := os.OpenFile(target, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(out, tr); err != nil {
+				out.Close()
+				return err
+			}
+			out.Close()
+		default:
+			// skip symlinks / specials
+		}
+	}
+	return nil
+}
+
+// ArchiveDestName returns a default extract directory name for an archive path.
+func ArchiveDestName(relPath string) string {
+	lower := strings.ToLower(relPath)
+	for _, suf := range []string{".tar.gz", ".tgz", ".tar.bz2", ".tar.xz"} {
+		if strings.HasSuffix(lower, suf) {
+			return relPath[:len(relPath)-len(suf)]
+		}
+	}
+	return strings.TrimSuffix(relPath, filepath.Ext(relPath))
+}
+
 // --- helpers ---
 
 func safeJoin(root, rel string) string {

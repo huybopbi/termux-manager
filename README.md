@@ -149,7 +149,7 @@ Listens on **localhost only**. No auth by default. If you tunnel or proxy the po
 
 - [ ] Basic auth (`-auth`)
 - [ ] Light theme
-- [ ] `.tar.gz` extract
+- [x] `.tar.gz` / `.tgz` / `.tar` extract (and `.zip`)
 - [ ] Receive Android shares into current folder
 
 ---

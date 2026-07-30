@@ -49,6 +49,7 @@ const api = {
   search:   (path, q)         => api.get(`/api/search?path=${enc(path)}&q=${enc(q)}`),
   zip:      (path, files, name) => api.post('/api/zip', { path, files, name }),
   unzip:    (path, dest)       => api.post('/api/unzip', { path, dest }),
+  untar:    (path, dest)       => api.post('/api/untar', { path, dest }),
   info:     ()                 => api.get('/api/info'),
   setRoot:  (path)             => api.post('/api/root', { path }),
   share:    (path)             => api.post('/api/termux/share', { path }),
@@ -117,6 +118,38 @@ function isImage(file) {
   if (!file || file.is_dir) return false;
   const ext = (file.ext || '').toLowerCase();
   return ['png','jpg','jpeg','gif','webp','bmp','svg','ico','heic','avif'].includes(ext);
+}
+
+function isZipArchive(file) {
+  if (!file || file.is_dir) return false;
+  return (file.ext || '').toLowerCase() === 'zip';
+}
+
+function isTarArchive(file) {
+  if (!file || file.is_dir) return false;
+  const name = (file.name || '').toLowerCase();
+  const ext = (file.ext || '').toLowerCase();
+  return name.endsWith('.tar.gz') || ext === 'tgz' || ext === 'tar';
+}
+
+function isArchive(file) {
+  return isZipArchive(file) || isTarArchive(file);
+}
+
+function archiveDestPath(file) {
+  const name = file.name || '';
+  const lower = name.toLowerCase();
+  let base = name;
+  for (const suf of ['.tar.gz', '.tgz', '.tar', '.zip']) {
+    if (lower.endsWith(suf)) {
+      base = name.slice(0, name.length - suf.length);
+      break;
+    }
+  }
+  const parent = file.path.includes('/')
+    ? file.path.slice(0, file.path.lastIndexOf('/'))
+    : '';
+  return joinPath(parent, base || (name + '_out'));
 }
 
 const PLACE_ICONS = {
@@ -393,6 +426,10 @@ function openFile(file) {
     openPreview(file);
     return;
   }
+  if (isArchive(file)) {
+    doExtract(file);
+    return;
+  }
   if (isEditable(file)) {
     openEditor(file);
     return;
@@ -569,6 +606,7 @@ function showCtxMenu(e, file) {
   // Hide items not applicable
   menu.querySelector('[data-ctx="edit"]').style.display = isEditable(file) ? '' : 'none';
   menu.querySelector('[data-ctx="preview"]').style.display = isImage(file) ? '' : 'none';
+  menu.querySelector('[data-ctx="extract"]').style.display = isArchive(file) ? '' : 'none';
   menu.querySelector('[data-ctx="open"]').style.display = file.is_dir ? 'none' : '';
   menu.querySelector('[data-ctx="share"]').style.display = state.isTermux ? '' : 'none';
 
@@ -1036,6 +1074,24 @@ async function doZip(paths) {
   else toast(res.error, 'error');
 }
 
+async function doExtract(file) {
+  if (!isArchive(file)) return;
+  const dest = archiveDestPath(file);
+  const ok = await confirmModal('Extract', `Extract ${file.name} → ${dest.split('/').pop() || dest}?`);
+  if (!ok) return;
+  setLoading(true);
+  const res = isZipArchive(file)
+    ? await api.unzip(file.path, dest)
+    : await api.untar(file.path, dest);
+  setLoading(false);
+  if (res.ok) {
+    toast('Extracted', 'success');
+    navigate(state.path);
+  } else {
+    toast(res.error || 'Extract failed', 'error');
+  }
+}
+
 /* ── Search ───────────────────────────────────────────── */
 let searchTimer;
 async function doSearch(q) {
@@ -1179,6 +1235,9 @@ async function init() {
           break;
         case 'zip-one':
           await doZip([file.path]);
+          break;
+        case 'extract':
+          await doExtract(file);
           break;
         case 'delete':
           await doDelete([file.path]);

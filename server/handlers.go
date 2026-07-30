@@ -343,13 +343,33 @@ func (s *Server) handleUnzip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Dest == "" {
-		req.Dest = strings.TrimSuffix(req.Path, filepath.Ext(req.Path))
+		req.Dest = fsops.ArchiveDestName(req.Path)
 	}
 	if err := fsops.Unzip(s.rootPath(), req.Path, req.Dest); err != nil {
 		s.fail(w, http.StatusInternalServerError, err)
 		return
 	}
-	s.ok(w, nil)
+	s.ok(w, map[string]string{"dest": req.Dest})
+}
+
+// POST /api/untar  body: {"path":"archive.tar.gz","dest":"output_dir"}
+func (s *Server) handleUntar(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path string `json:"path"`
+		Dest string `json:"dest"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.fail(w, http.StatusBadRequest, err)
+		return
+	}
+	if req.Dest == "" {
+		req.Dest = fsops.ArchiveDestName(req.Path)
+	}
+	if err := fsops.Untar(s.rootPath(), req.Path, req.Dest); err != nil {
+		s.fail(w, http.StatusInternalServerError, err)
+		return
+	}
+	s.ok(w, map[string]string{"dest": req.Dest})
 }
 
 // POST /api/tar  body: {"path":"dir","files":["a","b"],"name":"archive.tar.gz"}
