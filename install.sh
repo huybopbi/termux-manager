@@ -35,15 +35,15 @@ elif command -v wget &>/dev/null; then
   TAG=$(wget -qO- "$VERSION_URL" | grep '"tag_name"' | cut -d'"' -f4)
 fi
 
-if [ -z "$TAG" ]; then
-  echo "▷ Could not fetch latest release, using fallback binary name"
-  BINARY_NAME="manager-android-${GOARCH}"
-else
-  BINARY_NAME="manager-android-${GOARCH}"
-  echo "▷ Latest release : $TAG"
-fi
+BINARY_NAME="manager-android-${GOARCH}"
 
-DOWNLOAD_URL="https://github.com/$REPO/releases/download/$TAG/$BINARY_NAME"
+if [ -z "$TAG" ]; then
+  echo "▷ Latest release : (using /latest redirect)"
+  DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$BINARY_NAME"
+else
+  echo "▷ Latest release : $TAG"
+  DOWNLOAD_URL="https://github.com/$REPO/releases/download/$TAG/$BINARY_NAME"
+fi
 
 echo "▷ Downloading    : $BINARY_NAME"
 wget -q --show-progress -O "$BIN" "$DOWNLOAD_URL"
