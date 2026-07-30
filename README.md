@@ -56,7 +56,7 @@ Default bind is **127.0.0.1**. Open **Settings** in the UI (or pass `-listen 0.0
 - **Termux Midnight UI**: emerald dark surfaces, consistent SVG icons, compact mobile header
 - Browse with breadcrumb, parent `..`, Esc → up
 - Create folder/file (FAB), rename, delete, copy/cut/paste selection
-- Upload (button or drag-and-drop) with progress bar for large / multi-file uploads, download
+- Upload files or folders (button, FAB → Upload Folder, or drag-and-drop) with progress bar, download
 - Search under current directory
 - Zip / unzip
 - **Quick paths**: Home, Storage (`/sdcard`), Download, DCIM, Shared, Prefix
@@ -192,6 +192,7 @@ Default listen is **127.0.0.1**. You can switch to **0.0.0.0** in Settings (or `
 - [x] `manager update` — self-update from latest GitHub Release
 - [x] Settings UI + `-listen` / config for LAN & tunnel bind (`0.0.0.0`)
 - [x] Upload progress bar (multi-file / large files, cancel)
+- [x] Upload folders (webkitdirectory + drag-drop, preserves relative paths)
 
 ### Planned
 - [ ] Basic auth (`-auth`)

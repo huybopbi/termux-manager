@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -287,16 +288,22 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, abs)
 }
 
-// POST /api/upload?path=dir   multipart/form-data field "file"
+// POST /api/upload?path=dir   multipart/form-data
+//   file: the file contents
+//   relpath (optional): relative path under path (e.g. "mydir/a.txt") for folder uploads
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	dirRel := r.URL.Query().Get("path")
-	dirAbs := filepath.Join(s.rootPath(), filepath.Clean("/"+dirRel))
-	if !strings.HasPrefix(dirAbs, s.rootPath()) {
+	root := s.rootPath()
+	dirAbs := filepath.Join(root, filepath.Clean("/"+dirRel))
+	if !strings.HasPrefix(dirAbs, root) {
 		s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
 		return
 	}
 
-	r.ParseMultipartForm(512 << 20) // 512 MB max
+	if err := r.ParseMultipartForm(512 << 20); err != nil { // 512 MB max
+		s.fail(w, http.StatusBadRequest, err)
+		return
+	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		s.fail(w, http.StatusBadRequest, err)
@@ -304,15 +311,46 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	dest := filepath.Join(dirAbs, filepath.Base(header.Filename))
-	out, err := os.Create(dest)
+	rel := strings.TrimSpace(r.FormValue("relpath"))
+	if rel == "" {
+		rel = filepath.Base(header.Filename)
+	}
+	rel = filepath.ToSlash(rel)
+	rel = path.Clean("/" + rel)
+	rel = strings.TrimPrefix(rel, "/")
+	if rel == "" || rel == "." || strings.Contains(rel, "..") {
+		s.fail(w, http.StatusBadRequest, fmt.Errorf("invalid relative path"))
+		return
+	}
+
+	dest := filepath.Join(dirAbs, filepath.FromSlash(rel))
+	dirAbsClean := filepath.Clean(dirAbs)
+	destClean := filepath.Clean(dest)
+	sep := string(os.PathSeparator)
+	if destClean != dirAbsClean && !strings.HasPrefix(destClean, dirAbsClean+sep) {
+		s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
+		return
+	}
+	if !strings.HasPrefix(destClean, filepath.Clean(root)+sep) && destClean != filepath.Clean(root) {
+		s.fail(w, http.StatusForbidden, fmt.Errorf("forbidden"))
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(destClean), 0o755); err != nil {
+		s.fail(w, http.StatusInternalServerError, err)
+		return
+	}
+	out, err := os.Create(destClean)
 	if err != nil {
 		s.fail(w, http.StatusInternalServerError, err)
 		return
 	}
 	defer out.Close()
-	io.Copy(out, file)
-	s.ok(w, map[string]string{"name": header.Filename})
+	if _, err := io.Copy(out, file); err != nil {
+		s.fail(w, http.StatusInternalServerError, err)
+		return
+	}
+	s.ok(w, map[string]string{"name": header.Filename, "path": rel})
 }
 
 // POST /api/zip  body: {"path":"dir","files":["a","b"],"name":"archive.zip"}

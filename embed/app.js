@@ -1207,8 +1207,69 @@ function uploadOneFile(file, dirPath, onProgress) {
     xhr.onabort = () => reject(Object.assign(new Error('cancelled'), { cancelled: true }));
     const fd = new FormData();
     fd.append('file', file);
+    const rel = (file.relativePath || file.webkitRelativePath || file.name || '').replace(/^\/+/, '');
+    if (rel) fd.append('relpath', rel);
     xhr.send(fd);
   });
+}
+
+function uploadDisplayName(file) {
+  return file.relativePath || file.webkitRelativePath || file.name || '';
+}
+
+/** Collect files from a drag-drop event, preserving folder structure when possible. */
+async function filesFromDrop(dataTransfer) {
+  const items = [...(dataTransfer.items || [])];
+  if (!items.length) {
+    return [...(dataTransfer.files || [])].map(f => {
+      if (!f.relativePath) Object.defineProperty(f, 'relativePath', { value: f.name });
+      return f;
+    });
+  }
+
+  const out = [];
+
+  function readAllEntries(reader) {
+    return new Promise((resolve, reject) => {
+      const acc = [];
+      const pump = () => {
+        reader.readEntries(entries => {
+          if (!entries.length) resolve(acc);
+          else { acc.push(...entries); pump(); }
+        }, reject);
+      };
+      pump();
+    });
+  }
+
+  async function walkEntry(entry, prefix) {
+    if (!entry) return;
+    if (entry.isFile) {
+      const file = await new Promise((res, rej) => entry.file(res, rej));
+      const rel = prefix + file.name;
+      Object.defineProperty(file, 'relativePath', { value: rel });
+      out.push(file);
+      return;
+    }
+    if (entry.isDirectory) {
+      const children = await readAllEntries(entry.createReader());
+      const next = prefix + entry.name + '/';
+      for (const child of children) await walkEntry(child, next);
+    }
+  }
+
+  let usedEntries = false;
+  for (const item of items) {
+    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+    if (entry) {
+      usedEntries = true;
+      await walkEntry(entry, '');
+    }
+  }
+  if (!usedEntries) {
+    return [...(dataTransfer.files || [])];
+  }
+  return out;
 }
 
 async function uploadFiles(files) {
@@ -1229,7 +1290,7 @@ async function uploadFiles(files) {
   showUploadProgress();
   setUploadProgress({
     title: `Uploading 0/${list.length}`,
-    file: list[0].name,
+    file: uploadDisplayName(list[0]),
     pct: 0,
     meta: `0 / ${formatSize(totalBytes)}`,
   });
@@ -1238,14 +1299,14 @@ async function uploadFiles(files) {
     for (let i = 0; i < list.length; i++) {
       const file = list[i];
       const fileSize = file.size || 0;
+      const label = uploadDisplayName(file);
       setUploadProgress({
         title: `Uploading ${i + 1}/${list.length}`,
-        file: file.name,
+        file: label,
       });
       try {
-        await uploadOneFile(file, destPath, (loaded, total) => {
-          const cur = total > 0 ? loaded : loaded;
-          const overall = doneBytes + cur;
+        await uploadOneFile(file, destPath, (loaded) => {
+          const overall = doneBytes + loaded;
           const pct = (overall / totalBytes) * 100;
           setUploadProgress({
             pct,
@@ -1265,7 +1326,7 @@ async function uploadFiles(files) {
         }
         failCount++;
         doneBytes += fileSize;
-        toast(`Upload failed: ${file.name}`, 'error');
+        toast(`Upload failed: ${label}`, 'error');
       }
     }
   } finally {
@@ -1282,9 +1343,10 @@ async function uploadFiles(files) {
     navigate(state.path);
     const input = $('#upload-input');
     if (input) input.value = '';
+    const dirInput = $('#upload-dir-input');
+    if (dirInput) dirInput.value = '';
   }
 }
-
 /* ── Actions ──────────────────────────────────────────── */
 async function doDelete(paths) {
   const ok = await confirmModal('Delete', `Delete ${paths.length} item(s)? This cannot be undone.`, true);
@@ -1446,6 +1508,10 @@ async function init() {
     if (e.target.files.length) uploadFiles([...e.target.files]);
     e.target.value = '';
   };
+  $('#upload-dir-input').onchange = (e) => {
+    if (e.target.files.length) uploadFiles([...e.target.files]);
+    e.target.value = '';
+  };
   $('#upload-progress-cancel').onclick = () => {
     if (typeof uploadCancel === 'function') uploadCancel();
   };
@@ -1463,6 +1529,7 @@ async function init() {
       $('#fab-menu').classList.add('hidden');
       if (btn.dataset.fab === 'mkdir') doMkdir();
       if (btn.dataset.fab === 'touch') doTouch();
+      if (btn.dataset.fab === 'upload-folder') $('#upload-dir-input').click();
     };
   });
 
@@ -1581,12 +1648,16 @@ async function init() {
     }
   });
 
-  // Drag-and-drop upload
+  // Drag-and-drop upload (files + folders)
   document.addEventListener('dragover', (e) => e.preventDefault());
-  document.addEventListener('drop', (e) => {
+  document.addEventListener('drop', async (e) => {
     e.preventDefault();
-    const files = [...e.dataTransfer.files];
-    if (files.length) uploadFiles(files);
+    try {
+      const files = await filesFromDrop(e.dataTransfer);
+      if (files.length) uploadFiles(files);
+    } catch (err) {
+      toast('Drop failed: ' + (err.message || err), 'error');
+    }
   });
 }
 

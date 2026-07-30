@@ -86,6 +86,7 @@
       <div id="fab-menu" class="hidden">
         <button data-fab="mkdir">📁 New Folder</button>
         <button data-fab="touch">📄 New File</button>
+        <button data-fab="upload-folder">📂 Upload Folder</button>
       </div>
     </div>
   </div>
@@ -273,6 +274,7 @@
 
   <!-- Upload input (hidden) -->
   <input type="file" id="upload-input" multiple style="display:none" />
+  <input type="file" id="upload-dir-input" webkitdirectory directory multiple style="display:none" />
 
   <!-- Upload progress -->
   <div id="upload-progress" class="hidden" aria-live="polite">
