@@ -1,0 +1,20 @@
+# Binaries
+/manager
+/manager.exe
+/termux-manager-bin
+/dist/
+
+# Go
+*.test
+coverage.out
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local
+*.log
+.env

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>Termux Manager</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+  <link rel="stylesheet" href="/terminal.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <div id="header-left">
+        <button id="btn-back" class="icon-btn hidden" title="Go back">←</button>
+        <button id="btn-places" class="icon-btn" title="Quick paths">☰</button>
+        <span id="app-title">termux-manager</span>
+      </div>
+      <div id="breadcrumb-wrap">
+        <div id="breadcrumb"></div>
+      </div>
+      <div id="header-right">
+        <button id="btn-search" class="icon-btn" title="Search">⌕</button>
+        <button id="btn-hidden" class="icon-btn" title="Toggle hidden files">◎</button>
+        <button id="btn-upload" class="icon-btn" title="Upload">↑</button>
+        <button id="btn-terminal" class="icon-btn" title="Show/hide terminal (keeps sessions)">⌨</button>
+        <button id="btn-term-popout" class="icon-btn" title="Terminal in new tab">↗</button>
+      </div>
+    </header>
+
+    <!-- Search bar (hidden by default) -->
+    <div id="search-bar" class="hidden">
+      <input id="search-input" type="text" placeholder="Search files…" autocomplete="off" />
+      <button id="btn-search-close" class="icon-btn">✕</button>
+    </div>
+
+    <!-- Selection toolbar (visible when files selected) -->
+    <div id="selection-bar" class="hidden">
+      <button id="btn-select-all" class="sel-master" title="Select all" aria-label="Select all">
+        <span id="select-all-checkbox" class="file-checkbox"></span>
+      </button>
+      <button id="selection-count" class="sel-count-btn" title="Select all">0 selected</button>
+      <div id="selection-actions">
+        <button data-action="copy-sel" class="sel-btn">Copy</button>
+        <button data-action="move-sel" class="sel-btn">Move</button>
+        <button data-action="zip-sel" class="sel-btn">Zip</button>
+        <button data-action="delete-sel" class="sel-btn danger">Delete</button>
+      </div>
+      <button id="btn-deselect" class="icon-btn" title="Clear selection">✕</button>
+    </div>
+
+    <!-- File list -->
+    <main id="main">
+      <div id="file-list"></div>
+      <div id="empty-state" class="hidden">
+        <div class="empty-icon">📂</div>
+        <p>This folder is empty</p>
+      </div>
+      <div id="loading" class="hidden">
+        <div class="spinner"></div>
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <div id="fab-group">
+      <button id="fab-main" title="New">+</button>
+      <div id="fab-menu" class="hidden">
+        <button data-fab="mkdir">📁 New Folder</button>
+        <button data-fab="touch">📄 New File</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick paths drawer -->
+  <div id="places-overlay" class="hidden">
+    <div id="places-sheet">
+      <div id="places-header">
+        <span>Quick paths</span>
+        <button id="places-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div id="places-list"></div>
+      <div id="places-current"></div>
+    </div>
+  </div>
+
+  <!-- Image preview -->
+  <div id="preview-overlay" class="hidden">
+    <div id="preview-header">
+      <span id="preview-filename"></span>
+      <div id="preview-actions">
+        <a id="preview-download" class="icon-btn" title="Download" download>↓</a>
+        <button id="preview-close" class="icon-btn" title="Close">✕</button>
+      </div>
+    </div>
+    <div id="preview-body">
+      <img id="preview-img" alt="" />
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal">
+      <div id="modal-title"></div>
+      <div id="modal-body"></div>
+      <div id="modal-actions">
+        <button id="modal-cancel">Cancel</button>
+        <button id="modal-confirm" class="primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Editor -->
+  <div id="editor-overlay" class="hidden">
+    <div id="editor-header">
+      <button id="editor-back" class="icon-btn" title="Back">←</button>
+      <span id="editor-filename"></span>
+      <span id="editor-dirty" class="hidden" title="Unsaved changes">●</span>
+      <div id="editor-actions">
+        <button id="editor-undo" class="icon-btn" title="Undo">↶</button>
+        <button id="editor-redo" class="icon-btn" title="Redo">↷</button>
+        <button id="editor-find-btn" class="icon-btn" title="Find / Replace">⌕</button>
+        <button id="editor-goto" class="icon-btn" title="Go to line">#</button>
+        <button id="editor-wrap" class="icon-btn" title="Toggle word wrap">W</button>
+        <button id="editor-font-dec" class="icon-btn editor-font-btn" title="Smaller font">A−</button>
+        <button id="editor-font-inc" class="icon-btn editor-font-btn" title="Larger font">A+</button>
+        <button id="editor-save" class="icon-btn primary-text">Save</button>
+      </div>
+    </div>
+    <div id="editor-findbar" class="hidden">
+      <input id="editor-find-input" type="text" placeholder="Find" autocomplete="off" />
+      <input id="editor-replace-input" type="text" placeholder="Replace" autocomplete="off" />
+      <button id="editor-find-prev" class="icon-btn" title="Previous">↑</button>
+      <button id="editor-find-next" class="icon-btn" title="Next">↓</button>
+      <button id="editor-replace-one" class="sel-btn">Replace</button>
+      <button id="editor-replace-all" class="sel-btn">All</button>
+      <span id="editor-find-count"></span>
+      <button id="editor-find-close" class="icon-btn" title="Close">✕</button>
+    </div>
+    <div id="editor-body">
+      <div id="editor-ace"></div>
+    </div>
+    <div id="editor-statusbar">
+      <span id="editor-pos">Ln 1, Col 1</span>
+      <span id="editor-sel"></span>
+      <span id="editor-lang">plaintext</span>
+    </div>
+  </div>
+
+  <!-- Context menu -->
+  <div id="ctx-menu" class="hidden">
+    <button data-ctx="open">Open</button>
+    <button data-ctx="preview">Preview</button>
+    <button data-ctx="edit">Edit</button>
+    <button data-ctx="download">Download</button>
+    <button data-ctx="rename">Rename</button>
+    <button data-ctx="copy">Copy path</button>
+    <button data-ctx="share">Share</button>
+    <button data-ctx="zip-one">Zip</button>
+    <button data-ctx="delete" class="danger">Delete</button>
+  </div>
+
+  <!-- Upload input (hidden) -->
+  <input type="file" id="upload-input" multiple style="display:none" />
+
+  <!-- Terminal panel -->
+  <div id="term-panel" class="hidden">
+    <div id="term-header">
+      <div id="term-tabs"></div>
+      <div id="term-header-actions">
+        <button id="btn-term-new" class="icon-btn" title="New tab">+</button>
+        <button id="btn-term-popout-panel" class="icon-btn" title="Open in new tab">↗</button>
+        <button id="btn-term-resize" class="icon-btn" title="Expand/shrink">⤢</button>
+        <button id="btn-term-close" class="icon-btn" title="Kill all sessions & close">✕</button>
+      </div>
+    </div>
+    <div id="term-body">
+      <div id="term-container"></div>
+    </div>
+    <div id="term-mobile-toolbar">
+      <button type="button" class="mob-key mob-action" id="btn-term-copy" title="Copy screen (hold: more history)">Copy</button>
+      <button type="button" class="mob-key mob-action" id="btn-term-paste" title="Paste">Paste</button>
+      <button class="mob-key" data-key="&#x1b;">ESC</button>
+      <button class="mob-key" data-key="&#x09;">TAB</button>
+      <button class="mob-key" data-key="&#x01;">C-a</button>
+      <button class="mob-key" data-key="&#x03;">C-c</button>
+      <button class="mob-key" data-key="&#x04;">C-d</button>
+      <button class="mob-key" data-key="&#x0c;">C-l</button>
+      <button class="mob-key" data-key="&#x1b;[A">↑</button>
+      <button class="mob-key" data-key="&#x1b;[B">↓</button>
+      <button class="mob-key" data-key="&#x1b;[D">←</button>
+      <button class="mob-key" data-key="&#x1b;[C">→</button>
+    </div>
+  </div>
+
+  <!-- Resize handle between file manager and terminal -->
+  <div id="term-resize-handle" class="hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+  <script src="/vendor/ace/ace.js"></script>
+  <script src="/app.js"></script>
+  <script src="/terminal.js"></script>
+</body>
+</html>

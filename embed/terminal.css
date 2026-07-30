@@ -1,0 +1,252 @@
+/* ── Nerd Font (Powerlevel10k / terminal icons) ───────── */
+@font-face {
+  font-family: 'JetBrainsMono Nerd Font Mono';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.3.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFontMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrainsMono Nerd Font Mono';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.3.0/patched-fonts/JetBrainsMono/Ligatures/Bold/JetBrainsMonoNerdFontMono-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Terminal panel ───────────────────────────────────── */
+#term-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 45vh;
+  min-height: 200px;
+  max-height: 90vh;
+  background: #0d1117;
+  border-top: 2px solid var(--accent);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  transition: height 0.2s ease;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.6);
+}
+#term-panel.expanded {
+  height: 90vh;
+}
+
+/* Fullscreen terminal page (/term.html)
+   Height/top are driven by visualViewport JS so the key toolbar
+   stays above the soft keyboard instead of under it. */
+body.term-only {
+  overflow: hidden;
+  background: #0d1117;
+  overscroll-behavior: none;
+  height: 100%;
+}
+html:has(body.term-only) {
+  height: 100%;
+  overflow: hidden;
+}
+body.term-only #app {
+  height: 100%;
+  height: 100dvh;
+}
+body.term-only #term-panel,
+body.term-only #term-panel.expanded,
+body.term-only #term-panel.standalone {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  min-height: 0;
+  border-top: none;
+  box-shadow: none;
+  transition: none;
+  display: flex;
+  flex-direction: column;
+}
+body.term-only #term-header {
+  flex: 0 0 auto;
+}
+body.term-only #term-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+body.term-only #term-mobile-toolbar {
+  display: flex !important;
+  flex: 0 0 auto;
+  z-index: 30;
+  padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+  background: #161b22;
+}
+body.term-only #term-resize-handle { display: none !important; }
+body.term-only #btn-term-files {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#term-header-actions a.icon-btn { line-height: 1; }
+
+/* ── Resize handle ────────────────────────────────────── */
+#term-resize-handle {
+  position: fixed;
+  bottom: 45vh;
+  left: 0; right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 51;
+  background: transparent;
+}
+#term-resize-handle:hover {
+  background: rgba(88,166,255,0.3);
+}
+
+/* ── Tab bar ──────────────────────────────────────────── */
+#term-header {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  background: #161b22;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 0 4px;
+}
+#term-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#term-tabs::-webkit-scrollbar { display: none; }
+
+.term-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+.term-tab:hover { background: var(--bg3); color: var(--text); }
+.term-tab.active {
+  background: var(--bg3);
+  color: var(--accent);
+  border-color: var(--border);
+}
+.term-tab-close {
+  width: 18px; height: 18px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  color: var(--text2);
+  opacity: 1;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.term-tab-close:hover { background: rgba(248,81,73,0.3); color: var(--red); }
+
+#term-header-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+#term-header-actions .icon-btn {
+  width: 30px; height: 30px;
+  font-size: 14px;
+}
+
+/* ── xterm container ──────────────────────────────────── */
+#term-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+#term-container {
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+}
+
+/* Override xterm defaults to blend with our theme */
+.xterm {
+  height: 100%;
+}
+.xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.xterm-screen {
+  /* let FitAddon handle sizing */
+}
+
+/* ── Mobile control toolbar ───────────────────────────── */
+#term-mobile-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  background: #161b22;
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+#term-mobile-toolbar::-webkit-scrollbar { display: none; }
+
+.mob-key {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.mob-key:active { background: var(--accent2); }
+.mob-action {
+  color: var(--accent);
+  border-color: rgba(88, 166, 255, 0.45);
+  font-weight: 600;
+}
+
+/* ── Push main content up when terminal is open ───────── */
+#app.term-open #main {
+  margin-bottom: 45vh;
+}
+#app.term-open.term-expanded #main {
+  margin-bottom: 90vh;
+}
+
+/* ── Connecting overlay ───────────────────────────────── */
+.term-connecting {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13,17,23,0.85);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text2);
+  gap: 10px;
+}
+.term-connecting .spinner {
+  width: 18px; height: 18px;
+  border-width: 2px;
+  margin: 0;
+}
