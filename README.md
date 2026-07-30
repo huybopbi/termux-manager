@@ -180,7 +180,9 @@ Listens on **localhost only**. No auth by default. If you tunnel or proxy the po
 - [x] Editor extras: dirty ●, Ctrl+S, find/replace, goto, wrap, font ±, undo/redo
 - [x] Terminal: Nerd Font, mobile Copy/Paste, popout `/term.html`, clean `SSH_*` env
 - [x] DB panel: connect MySQL/MariaDB + SQLite, browse/edit rows (PK), SQL console
-- [x] Termux Midnight theme: refined dark surfaces, SVG icon system, mobile bottom navigation
+- [x] Termux Midnight theme: refined dark surfaces, SVG icon system, top header nav on mobile
+- [x] URL hash path persistence (F5 restores current directory)
+- [x] GitHub Releases with pre-built binaries (android-arm64, android-arm, linux-amd64, windows-amd64)
 
 ### Planned
 - [ ] Basic auth (`-auth`)
