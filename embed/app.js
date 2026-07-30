@@ -164,6 +164,7 @@ function fileTypeInfo(file) {
     log:  { kind: 'text', badge: 'LOG', tag: 'Text', glyph: '≡' },
     csv:  { kind: 'text', badge: 'CSV', tag: 'Data', glyph: '#' },
     conf: { kind: 'text', badge: 'CFG', tag: 'Config', glyph: '⚙' },
+    cfg:  { kind: 'text', badge: 'CFG', tag: 'Config', glyph: '⚙' },
     ini:  { kind: 'text', badge: 'INI', tag: 'Config', glyph: '⚙' },
     env:  { kind: 'text', badge: 'ENV', tag: 'Config', glyph: '⚙' },
   };
@@ -203,7 +204,7 @@ function isEditable(file) {
   if (!ext) return true;
   const editable = ['txt','md','json','yaml','yml','toml','sh','bash',
     'js','ts','css','html','py','go','php','c','cpp','h','rs','java',
-    'kt','conf','ini','env','log','csv','xml','sql',
+    'kt','conf','cfg','ini','env','log','csv','xml','sql',
     'gitignore','dockerignore','editorconfig','npmrc','prettierrc'];
   return editable.includes(ext);
 }
