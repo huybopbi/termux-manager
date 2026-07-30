@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/huybopbi/termux-manager/server"
@@ -31,9 +32,10 @@ func assetName() string {
 		return fmt.Sprintf("manager-windows-%s.exe", arch)
 	case "darwin":
 		return fmt.Sprintf("manager-darwin-%s", arch)
-	default:
-		// linux and android-via-linux (Termux)
+	case "android":
 		return fmt.Sprintf("manager-android-%s", arch)
+	default:
+		return fmt.Sprintf("manager-linux-%s", arch)
 	}
 }
 
@@ -61,7 +63,7 @@ func selfUpdate() {
 		log.Fatal("No release found")
 	}
 
-	if rel.TagName == "v"+version {
+	if strings.TrimPrefix(rel.TagName, "v") == strings.TrimPrefix(version, "v") {
 		fmt.Printf("Already up to date (%s)\n", rel.TagName)
 		return
 	}

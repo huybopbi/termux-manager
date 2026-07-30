@@ -14,15 +14,19 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - goos: linux
+          # Termux MUST use GOOS=android. GOOS=linux binaries hit SIGSYS
+          # (faccessat2) under Android seccomp when calling os/exec.
+          - goos: android
             goarch: arm64
             asset: manager-android-arm64
-          - goos: linux
+          - goos: android
             goarch: arm
             goarm: "7"
             asset: manager-android-arm
+            needs_ndk: true
           - goos: linux
             goarch: amd64
             asset: manager-linux-amd64
@@ -43,13 +47,31 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Setup Android NDK (android/arm needs external linker)
+        if: matrix.needs_ndk
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+          link-to-sdk: false
+
       - name: Build
         env:
-          CGO_ENABLED: "0"
+          CGO_ENABLED: ${{ matrix.needs_ndk && '1' || '0' }}
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           GOARM: ${{ matrix.goarm }}
-        run: go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o ${{ matrix.asset }} .
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          EXTRA_LDFLAGS="-linkmode=internal"
+          if [ "${{ matrix.needs_ndk }}" = "true" ]; then
+            NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+            export CC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang"
+            EXTRA_LDFLAGS="-linkmode=external"
+          fi
+          go build -trimpath \
+            -ldflags="-s -w ${EXTRA_LDFLAGS} -X main.version=${VERSION}" \
+            -o "${{ matrix.asset }}" .
 
       - name: Upload asset
         uses: softprops/action-gh-release@v2
